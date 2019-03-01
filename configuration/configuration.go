@@ -13,8 +13,7 @@ import (
 
 const (
 	// EnvPrefix will be used for environment variable name prefixing.
-	EnvPrefix         = "RHDEV"
-	defaultConfigFile = "config.yaml"
+	EnvPrefix = "RHDEV"
 
 	// Constants for viper variable names. Will be used to set
 	// default values as well as to get each value
@@ -65,16 +64,11 @@ func New(configFilePath string) (*Registry, error) {
 
 func getConfigFilePath() string {
 	// This was either passed as a env var Or, set inside main.go from --config
-	envConfigPath, ok := os.LookupEnv(envPrefix + "_CONFIG_FILE_PATH")
+	envConfigPath, ok := os.LookupEnv(EnvPrefix + "_CONFIG_FILE_PATH")
 	if !ok {
 		return ""
 	}
 	return envConfigPath
-}
-
-// GetDefaultConfigurationFile returns the default configuration file.
-func (c *Registry) GetDefaultConfigurationFile() string {
-	return defaultConfigFile
 }
 
 // Get is a wrapper over New() which reads configuration file path from the
@@ -88,8 +82,8 @@ func (c *Registry) setConfigDefaults() {
 	c.v.SetTypeByDefaultValue(true)
 
 	c.v.SetDefault(varHTTPAddress, DefaultHTTPAddress)
-	c.v.SetDefault(varLogLevel, defaultLogLevel)
-	c.v.SetDefault(varLogJSON, defaultLogJSON)
+	c.v.SetDefault(varLogLevel, DefaultLogLevel)
+	c.v.SetDefault(varLogJSON, DefaultLogJSON)
 }
 
 // GetHTTPAddress returns the HTTP address (as set via default, config file, or
@@ -110,8 +104,5 @@ func (c *Registry) IsLogJSON() bool {
 	if c.v.IsSet(varLogJSON) {
 		return c.v.GetBool(varLogJSON)
 	}
-	if c.IsPostgresDeveloperModeEnabled() {
-		return false
-	}
-	return true
+	return DefaultLogJSON
 }
