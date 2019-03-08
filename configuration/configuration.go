@@ -4,8 +4,8 @@ package configuration
 
 import (
 	"crypto/rsa"
-	"os"
 	"strings"
+	"time"
 
 	errs "github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -22,6 +22,15 @@ const (
 	// be exported to by default.
 	DefaultHTTPAddress = "0.0.0.0:8001"
 
+	varHTTPIdleTimeout = "http.idle_timeout"
+	// DefaultHTTPIdleTimeout specifies the default timeout for HTTP idling
+	DefaultHTTPIdleTimeout = time.Second * 15
+
+	varHTTPCompressResponses = "http.compress"
+	// DefaultHTTPCompressResponses compresses HTTP responses for clients that
+	// support it via the 'Accept-Encoding' header.
+	DefaultHTTPCompressResponses = false
+
 	varLogLevel = "log.level"
 	// DefaultLogLevel is the default log level used in your service.
 	DefaultLogLevel = "info"
@@ -29,6 +38,19 @@ const (
 	varLogJSON = "log.json"
 	// DefaultLogJSON is a switch to toggle on and off JSON log output.
 	DefaultLogJSON = false
+
+	varGracefulTimeout = "graceful_timeout"
+	// DefaultGracefulTimeout is the duration for which the server gracefully
+	// wait for existing connections to finish - e.g. 15s or 1m
+	DefaultGracefulTimeout = time.Second * 15
+
+	varHTTPWriteTimeout = "http.write_timeout"
+	// DefaultHTTPWriteTimeout specifies the default timeout for HTTP writes
+	DefaultHTTPWriteTimeout = time.Second * 15
+
+	varHTTPReadTimeout = "http.read_timeout"
+	// DefaultHTTPReadTimeout specifies the default timeout for HTTP reads
+	DefaultHTTPReadTimeout = time.Second * 15
 )
 
 // Registry encapsulates the Viper configuration registry which stores the
@@ -40,7 +62,8 @@ type Registry struct {
 }
 
 // New creates a configuration reader object using a configurable configuration
-// file path.
+// file path. If the provided config file path is empty, a default configuration
+// will be created.
 func New(configFilePath string) (*Registry, error) {
 	c := Registry{
 		v: viper.New(),
@@ -62,34 +85,44 @@ func New(configFilePath string) (*Registry, error) {
 	return &c, nil
 }
 
-func getConfigFilePath() string {
-	// This was either passed as a env var Or, set inside main.go from --config
-	envConfigPath, ok := os.LookupEnv(EnvPrefix + "_CONFIG_FILE_PATH")
-	if !ok {
-		return ""
-	}
-	return envConfigPath
-}
-
-// Get is a wrapper over New() which reads configuration file path from the
-// environment variable.
-func Get() (*Registry, error) {
-	cd, err := New(getConfigFilePath())
-	return cd, err
-}
-
 func (c *Registry) setConfigDefaults() {
 	c.v.SetTypeByDefaultValue(true)
 
 	c.v.SetDefault(varHTTPAddress, DefaultHTTPAddress)
+	c.v.SetDefault(varHTTPCompressResponses, DefaultHTTPCompressResponses)
+	c.v.SetDefault(varHTTPWriteTimeout, DefaultHTTPWriteTimeout)
+	c.v.SetDefault(varHTTPReadTimeout, DefaultHTTPReadTimeout)
+	c.v.SetDefault(varHTTPIdleTimeout, DefaultHTTPIdleTimeout)
 	c.v.SetDefault(varLogLevel, DefaultLogLevel)
 	c.v.SetDefault(varLogJSON, DefaultLogJSON)
+	c.v.SetDefault(varGracefulTimeout, DefaultGracefulTimeout)
 }
 
 // GetHTTPAddress returns the HTTP address (as set via default, config file, or
 // environment variable) that the wit server binds to (e.g. "0.0.0.0:8080")
 func (c *Registry) GetHTTPAddress() string {
 	return c.v.GetString(varHTTPAddress)
+}
+
+// GetHTTPCompressResponses returns true if HTTP responses should be compressed
+// for clients that support it via the 'Accept-Encoding' header.
+func (c *Registry) GetHTTPCompressResponses() bool {
+	return c.v.GetBool(varHTTPCompressResponses)
+}
+
+// GetHTTPWriteTimeout returns the duration for which
+func (c *Registry) GetHTTPWriteTimeout() time.Duration {
+	return c.v.GetDuration(varHTTPWriteTimeout)
+}
+
+// GetHTTPReadTimeout returns the duration for which
+func (c *Registry) GetHTTPReadTimeout() time.Duration {
+	return c.v.GetDuration(varHTTPReadTimeout)
+}
+
+// GetHTTPIdleTimeout returns the duration for which
+func (c *Registry) GetHTTPIdleTimeout() time.Duration {
+	return c.v.GetDuration(varHTTPIdleTimeout)
 }
 
 // GetLogLevel returns the loggging level (as set via config file or environment
@@ -101,8 +134,11 @@ func (c *Registry) GetLogLevel() string {
 // IsLogJSON returns if we should log json format (as set via config file or
 // environment variable)
 func (c *Registry) IsLogJSON() bool {
-	if c.v.IsSet(varLogJSON) {
-		return c.v.GetBool(varLogJSON)
-	}
-	return DefaultLogJSON
+	return c.v.GetBool(varLogJSON)
+}
+
+// GetGracefulTimeout returns the duration for which the server gracefully wait
+// for existing connections to finish - e.g. 15s or 1m
+func (c *Registry) GetGracefulTimeout() time.Duration {
+	return c.v.GetDuration(varGracefulTimeout)
 }
