@@ -1,0 +1,31 @@
+specVersion: 0.0.1
+name: go-health-check
+projects:
+- name: go-health-check
+  source:
+    type: git
+    location: https://github.com/golang-starters/golang-health-check.git
+tools:
+- name: theia-ide
+  type: cheEditor
+  id: org.eclipse.che.editor.theia:master
+- name: exec-plugin
+  type: chePlugin
+  id: che-machine-exec-plugin:0.0.1
+- name: golang
+  type: chePlugin
+  id: ms-vscode.go:0.9.2
+- name: "default"
+  type: "dockerimage"
+  image: "eclipse/ubuntu_go"
+  memoryLimit: "2147483648"
+  mountSources: false
+  volumes: []
+  env: []
+commands:
+- name: run
+  actions:
+  - type: exec
+    tool: theia-ide
+    command: echo hello
+    workdir: /projects/go-health-check

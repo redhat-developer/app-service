@@ -1,0 +1,18 @@
+Name:         f8-ui
+Namespace:    myproject
+Labels:       <none>
+Annotations:  <none>
+API Version:  devopsconsole.openshift.io/v1alpha1
+Kind:         Component
+Metadata:
+  Creation Timestamp:  2019-03-08T09:21:43Z
+  Generation:          1
+  Resource Version:    340339
+  Self Link:           /apis/devopsconsole.openshift.io/v1alpha1/namespaces/myproject/components/f8-ui                                 
+  UID:                 96d5f2b6-4183-11e9-8a4f-525400f67e11
+Spec:
+  App:         openshiftio
+  Buildtype:   nodejs
+  Codebase:    https://github.com/sbose78/nodejs-rest-http-crud
+  Listenport:  8080
+Events:        <none>
