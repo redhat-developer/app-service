@@ -8,25 +8,11 @@ import (
 	"time"
 
 	"github.com/redhat-developer/boilerplate-app/configuration"
+	"github.com/redhat-developer/boilerplate-app/testutils"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// unsetEnvVar unsets the given environment variable with the key (if present).
-// It returns a function to be called whenever you want to restore the original
-// environment.
-func unsetEnvVar(key string) func() {
-	realEnvValue, present := os.LookupEnv(key)
-	os.Unsetenv(key)
-	return func() {
-		if present {
-			os.Setenv(key, realEnvValue)
-		} else {
-			os.Unsetenv(key)
-		}
-	}
-}
 
 // getDefaultConfiguration returns a configuration registry without anything but
 // defaults set. Remember that environment variables can overwrite defaults, so
@@ -71,14 +57,14 @@ func TestGetHTTPAddress(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "HTTP_ADDRESS"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultHTTPAddress, config.GetHTTPAddress())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := uuid.NewV4().String()
 		config := getFileConfiguration(t, `http.address: "`+newVal+`"`)
@@ -95,18 +81,18 @@ func TestGetHTTPAddress(t *testing.T) {
 
 func TestGetLogLevel(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "LOG_LEVEL"
-	resetFunc := unsetEnvVar(key)
+	resetFunc := testutils.UnsetEnvVar(key)
 	defer resetFunc()
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultLogLevel, config.GetLogLevel())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := uuid.NewV4().String()
 		config := getFileConfiguration(t, `log.level: "`+newVal+`"`)
@@ -123,18 +109,18 @@ func TestGetLogLevel(t *testing.T) {
 
 func TestIsLogJSON(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "LOG_JSON"
-	resetFunc := unsetEnvVar(key)
+	resetFunc := testutils.UnsetEnvVar(key)
 	defer resetFunc()
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultLogJSON, config.IsLogJSON())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := !configuration.DefaultLogJSON
 		config := getFileConfiguration(t, `log.json: "`+strconv.FormatBool(newVal)+`"`)
@@ -153,14 +139,14 @@ func TestGetGracefulTimeout(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "GRACEFUL_TIMEOUT"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultGracefulTimeout, config.GetGracefulTimeout())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := 333 * time.Second
 		config := getFileConfiguration(t, `graceful_timeout: "`+newVal.String()+`"`)
@@ -179,14 +165,14 @@ func TestGetHTTPWriteTimeout(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "HTTP_WRITE_TIMEOUT"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultHTTPWriteTimeout, config.GetHTTPWriteTimeout())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := 333 * time.Second
 		config := getFileConfiguration(t, `http.write_timeout: "`+newVal.String()+`"`)
@@ -205,14 +191,14 @@ func TestGetHTTPReadTimeout(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "HTTP_READ_TIMEOUT"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultHTTPReadTimeout, config.GetHTTPReadTimeout())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := 444 * time.Second
 		config := getFileConfiguration(t, `http.read_timeout: "`+newVal.String()+`"`)
@@ -231,14 +217,14 @@ func TestGetHTTPIdleTimeout(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "HTTP_IDLE_TIMEOUT"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultHTTPIdleTimeout, config.GetHTTPIdleTimeout())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := 111 * time.Second
 		config := getFileConfiguration(t, `http.idle_timeout: "`+newVal.String()+`"`)
@@ -257,14 +243,14 @@ func TestGetHTTPCompressResponses(t *testing.T) {
 	key := configuration.EnvPrefix + "_" + "HTTP_COMPRESS"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, configuration.DefaultHTTPCompressResponses, config.GetHTTPCompressResponses())
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := unsetEnvVar(key)
+		resetFunc := testutils.UnsetEnvVar(key)
 		defer resetFunc()
 		newVal := !configuration.DefaultHTTPCompressResponses
 		config := getFileConfiguration(t, `http.compress: "`+strconv.FormatBool(newVal)+`"`)

@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/redhat-developer/boilerplate-app/appserver"
 	"github.com/redhat-developer/boilerplate-app/configuration"
 )
 
@@ -28,12 +34,50 @@ func main() {
 		}
 	}
 
-	config, err := configuration.New(configFilePath)
+	srv, err := appserver.New(configFilePath)
 	if err != nil {
-		log.Panic(nil, map[string]interface{}{
-			"config_file_path": configFilePath,
-			"err":              err,
-		}, "failed to setup the configuration")
+		panic(err.Error())
 	}
-	_ = config
+
+	err = srv.SetupRoutes()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	routesToPrint, err := srv.GetRegisteredRoutes()
+	if err != nil {
+		panic(err.Error())
+	}
+	srv.Logger().Print(routesToPrint)
+
+	// listen concurrently to allow for graceful shutdown
+	go func() {
+		srv.Logger().Printf("Listening on %q...", srv.Config().GetHTTPAddress())
+		if err := srv.HTTPServer().ListenAndServe(); err != nil {
+			srv.Logger().Println(err)
+		}
+	}()
+
+	gracefulShutdown(srv.HTTPServer(), srv.Logger(), srv.Config().GetGracefulTimeout())
+}
+
+func gracefulShutdown(hs *http.Server, logger *log.Logger, timeout time.Duration) {
+	// For a channel used for notification of just one signal value, a buffer of
+	// size 1 is sufficient.
+	stop := make(chan os.Signal, 1)
+
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C) or SIGTERM
+	// (Ctrl+/). SIGKILL, SIGQUIT will not be caught.
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	sigReceived := <-stop
+	logger.Printf("interrupt received: %+v", sigReceived)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	logger.Printf("\nShutdown with timeout: %s\n", timeout)
+	if err := hs.Shutdown(ctx); err != nil {
+		logger.Printf("Shutdown error: %v\n", err)
+	} else {
+		logger.Println("Server stopped.")
+	}
 }

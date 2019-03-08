@@ -1,0 +1,6 @@
+ROUTE: 	Path template: /status/{format:(?:json|yaml)}
+	Name: status
+	Path regexp: ^/status/(?P<v0>(?:json|yaml))$
+	Queries templates: 
+	Queries regexps: 
+	Methods: GET
