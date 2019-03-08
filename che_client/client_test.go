@@ -1,7 +1,6 @@
 package che_client
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -31,6 +30,9 @@ func TestGetDefaultClient(t *testing.T) {
 
 func TestCreateWorkspace(t *testing.T) {
 	c := CheDefaultClient()
-	resp, _ := c.CreateWorkspace(devFile)
-	fmt.Println("DATA", string(resp))
+	_, err := c.CreateWorkspace(devFile)
+	if err != nil {
+		t.Fail()
+	}
+
 }

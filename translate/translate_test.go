@@ -1,7 +1,6 @@
 package translate
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -19,8 +18,10 @@ spec:
 
 func TestNewTranslater(t *testing.T) {
 	translater := Translater{
-		Input: TEST_CR,
+		Input: []byte(TEST_CR),
 	}
-	devfile := translater.Convert()
-	fmt.Println("Devfile", devfile.String())
+	_, err := translater.Convert()
+	if err != nil {
+		t.Fail()
+	}
 }
