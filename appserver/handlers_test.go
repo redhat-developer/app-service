@@ -113,7 +113,10 @@ func TestAppServer_HandleStatus(t *testing.T) {
 	}
 
 	for _, tc := range tt {
+		// capture range variable for parllel testing
+		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
 			// Create a request to pass to our handler. We don't have any query
 			// parameters for now, so we'll pass 'nil' as the third parameter.
 			req, err := http.NewRequest(tc.method, tc.path, nil)
