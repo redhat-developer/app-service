@@ -72,7 +72,7 @@ func TestAppServer_HandleStatus(t *testing.T) {
 			expectedHeaders:      map[string]string{"Content-Type": "application/json"},
 			matchBody:            true,
 			expectedResponseBody: string(expectedJSONBytes),
-			goldenFilePath:       filepath.Join(testDir, "ok_status.json"),
+			goldenFilePath:       filepath.Join(testDir, "ok.json"),
 			goldenFileOptions:    testutils.CompareOptions{UUIDAgnostic: true, DateTimeAgnostic: true},
 		},
 		{
@@ -83,7 +83,7 @@ func TestAppServer_HandleStatus(t *testing.T) {
 			expectedHeaders:      map[string]string{"Content-Type": "application/yaml"},
 			matchBody:            true,
 			expectedResponseBody: string(expectedYAMLBytes),
-			goldenFilePath:       filepath.Join(testDir, "ok_status.yaml"),
+			goldenFilePath:       filepath.Join(testDir, "ok.yaml"),
 			goldenFileOptions:    testutils.CompareOptions{UUIDAgnostic: true, DateTimeAgnostic: true},
 		},
 		{

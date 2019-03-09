@@ -209,7 +209,7 @@ func TestGoldenCompareWithGolden(t *testing.T) {
 		})
 		t.Run("mismatch between expected and actual output", func(t *testing.T) {
 			// given
-			f := "test-files/codebase/show/ok_without_auth.golden.json"
+			f := "../appserver/golden-files/status/ok.json"
 			// when
 			var data interface{} = dummy
 			if !opts.MarshalInputAsJSON {
@@ -219,14 +219,13 @@ func TestGoldenCompareWithGolden(t *testing.T) {
 			// then
 			require.Error(t, err)
 			_, isPathError := errs.Cause(err).(*os.PathError)
-			require.False(t, isPathError, "cause of error is not a path error: %+v", err)
-
+			require.False(t, isPathError)
 		})
 	}
 
 	t.Run("comparing with existing file", func(t *testing.T) {
 		// given
-		f := "test-files/dummy.golden.json"
+		f := "golden-files/dummy.golden.json"
 		bs, err := json.MarshalIndent(dummy, "", "  ")
 		require.NoError(t, err)
 		err = ioutil.WriteFile(f, bs, os.ModePerm)
