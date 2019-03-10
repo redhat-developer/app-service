@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnsetEnvVar(t *testing.T) {
-	t.Run("check unsetting and resetting of previously unset variable", func(t *testing.T) {
+func TestUnsetEnvVarAndRestore(t *testing.T) {
+	t.Run("check unsetting and restoring of previously unset variable", func(t *testing.T) {
 		// given
 		varName := uuid.NewV4().String()
 		os.Unsetenv(varName)
@@ -17,7 +17,7 @@ func TestUnsetEnvVar(t *testing.T) {
 		require.False(t, present)
 
 		// when
-		resetFn := UnsetEnvVar(varName)
+		resetFn := UnsetEnvVarAndRestore(varName)
 
 		// then
 		_, present = os.LookupEnv(varName)
@@ -29,7 +29,7 @@ func TestUnsetEnvVar(t *testing.T) {
 		require.False(t, present)
 	})
 
-	t.Run("check unsetting and resetting of previously set variable", func(t *testing.T) {
+	t.Run("check unsetting and restoring of previously set variable", func(t *testing.T) {
 		// given
 		varName := uuid.NewV4().String()
 		val := "somevalue"
@@ -38,7 +38,7 @@ func TestUnsetEnvVar(t *testing.T) {
 		require.True(t, present)
 
 		// when
-		resetFn := UnsetEnvVar(varName)
+		resetFn := UnsetEnvVarAndRestore(varName)
 
 		// then
 		_, present = os.LookupEnv(varName)

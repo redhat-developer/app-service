@@ -1,37 +1,21 @@
-# PROJECT_NAME=fabric8-wit
-# CUR_DIR=$(shell pwd)
-# TMP_PATH=$(CUR_DIR)/tmp
-# INSTALL_PREFIX=$(CUR_DIR)/bin
-# VENDOR_DIR=vendor
-# ifeq ($(OS),Windows_NT)
-# include ./.make/Makefile.win
-# else
-# include ./.make/Makefile.lnx
-# endif
-
-ifeq ($(BUILD_VERBOSE),1)
+# When you run make VERBOSE=1, executed commands will be printed before executed
+Q = @
+ifeq ($(VERBOSE),1)
        Q =
-else
-       Q = @
 endif
 
-SOURCES := $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 # It's necessary to set this because some environments don't link sh -> bash.
 SHELL := /bin/bash
 
-# DESIGN_DIR=design
-# DESIGNS := $(shell find $(SOURCE_DIR)/$(DESIGN_DIR) -path $(SOURCE_DIR)/vendor -prune -o -name '*.go' -print)
+# Create output directory for artifacts and test results
+$(shell mkdir -p ./out);
 
-# # Find all required tools:
-# GIT_BIN := $(shell command -v $(GIT_BIN_NAME) 2> /dev/null)
 # DEP_BIN_NAME := dep
 # DEP_BIN_DIR := $(TMP_PATH)/bin
 # DEP_BIN := $(DEP_BIN_DIR)/$(DEP_BIN_NAME)
 # DEP_VERSION=v0.4.1
-# GO_BIN := $(shell command -v $(GO_BIN_NAME) 2> /dev/null)
+
 # DOCKER_COMPOSE_BIN := $(shell command -v $(DOCKER_COMPOSE_BIN_NAME) 2> /dev/null)
-# DOCKER_BIN := $(shell command -v $(DOCKER_BIN_NAME) 2> /dev/null)
-# MINIMOCK_BIN=$(VENDOR_DIR)/github.com/gojuno/minimock/cmd/minimock/minimock
 
 # # Define and get the vakue for UNAME_S variable from shell
 # UNAME_S := $(shell uname -s)
@@ -43,13 +27,9 @@ SHELL := /bin/bash
 # export GIT_COMMITTER_NAME
 # export GIT_COMMITTER_EMAIL
 
-# # Used as target and binary output names... defined in includes
-# CLIENT_DIR=tool/wit-cli
-
-COMMIT=$(shell git rev-parse HEAD)
-GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
-ifneq ($(GITUNTRACKEDCHANGES),)
-COMMIT := $(COMMIT)-dirty
+GIT_COMMIT_ID=$(shell git rev-parse HEAD)
+ifneq ($(shell git status --porcelain --untracked-files=no),)
+       GIT_COMMIT_ID = $(COMMIT)-dirty
 endif
 BUILD_TIME=`date -u '+%Y-%m-%dT%H:%M:%SZ'`
 
@@ -58,30 +38,58 @@ GO_PACKAGE_ORG_NAME ?= $(shell basename $$(dirname $$PWD))
 GO_PACKAGE_REPO_NAME ?= $(shell basename $$PWD)
 GO_PACKAGE_PATH ?= github.com/${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}
 
-# For the global "clean" target all targets in this variable will be executed
-CLEAN_TARGETS =
-
 # Pass in build time variables to main
-LDFLAGS=-ldflags "-X ${GO_PACKAGE_PATH}/appserver.Commit=${COMMIT} -X ${GO_PACKAGE_PATH}/appserver.BuildTime=${BUILD_TIME}"
+LDFLAGS=-ldflags "-X ${GO_PACKAGE_PATH}/appserver.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/appserver.BuildTime=${BUILD_TIME}"
 
 .PHONY: all
-all: ./app-server
+all: ./out/app-server test-coverage
 
-./app-server: $(SOURCES) Makefile
-	$(Q)go build -v ${LDFLAGS} -o ./app-server
+.PHONY: clean
+clean:
+	$(Q)-rm -rf ./out
+	$(Q)-rm -rf ./vendor
 
-CLEAN_TARGETS += clean-app-server
-.PHONY: clean-app-server
-## Removes the application server binary
-clean-server:
-	$(Q)-rm -f ./app-server
+.PHONY: test
+test:
+	$(Q)go test ./... -failfast
 
-# $(BINARY_CLIENT_BIN): $(SOURCES)
-# ifeq ($(OS),Windows_NT)
-# 	cd ${CLIENT_DIR}/ && go build -v ${LDFLAGS} -o "$(shell cygpath --windows '$(BINARY_CLIENT_BIN)')"
-# else
-# 	cd ${CLIENT_DIR}/ && go build -v -o ${BINARY_CLIENT_BIN}
-# endif
+.PHONY: test-coverage
+test-coverage: ./out/cover.out
+
+.PHONY: test-coverage-html
+test-coverage-html: ./out/cover.out
+	$(Q)go tool cover -html=./out/cover.out
+
+./out/app-server: ./vendor $(shell find . -path ./vendor -prune -o -name '*.go' -print)
+	$(Q)go build -v ${LDFLAGS} -o ./out/app-server
+
+./vendor: Gopkg.toml Gopkg.lock
+	$(Q)dep ensure -v
+
+./out/cover.out:
+	$(Q)go test ./... -failfast -coverprofile=cover.out -covermode=set -outputdir=./out	
+
+# Find all tools
+TOOL_GO = $(shell command -v gos 2> /dev/null)
+TOOL_GIT = $(shell command -v git 2> /dev/null)
+TOOL_DEP = $(shell command -v dep 2> /dev/null)
+TOOL_DOCKER = $(shell command -v docker 2> /dev/null)
+
+.PHONY: check-tools
+check-tools:
+ifndef TOOL_GIT
+       $(error The git executable could not be found in your PATH)
+endif
+ifndef TOOL_GO
+       $(error The go executable could not be found in your PATH)
+endif
+ifndef TOOL_DEP
+       $(error The dep executable could not be found in your PATH)
+endif
+ifndef TOOL_DOCKER
+       $(error The docker executable could not be found in your PATH)
+endif
+
 
 # # Build go tool to analysis the code
 # $(GOLINT_BIN):
@@ -323,8 +331,3 @@ clean-server:
 # else
 # 	@go build -o $(CHECK_GOPATH_BIN) .make/check_gopath.go
 # endif
-
-# Keep this "clean" target here at the bottom
-.PHONY: clean
-## Runs all clean-* targets.
-clean: $(CLEAN_TARGETS)

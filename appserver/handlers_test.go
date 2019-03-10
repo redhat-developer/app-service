@@ -21,7 +21,7 @@ import (
 func TestAppServer_HandleStatus(t *testing.T) {
 	// enable gzip compression
 	key := configuration.EnvPrefix + "_" + "HTTP_COMPRESS"
-	resetFunc := testutils.UnsetEnvVar(key)
+	resetFunc := testutils.UnsetEnvVarAndRestore(key)
 	defer resetFunc()
 	os.Setenv(key, strconv.FormatBool(true))
 
