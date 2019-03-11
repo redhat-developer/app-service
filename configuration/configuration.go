@@ -20,7 +20,7 @@ const (
 	varHTTPAddress = "http.address"
 	// DefaultHTTPAddress is the address and port string that your service will
 	// be exported to by default.
-	DefaultHTTPAddress = "0.0.0.0:8001"
+	DefaultHTTPAddress = "0.0.0.0:8080"
 
 	varHTTPIdleTimeout = "http.idle_timeout"
 	// DefaultHTTPIdleTimeout specifies the default timeout for HTTP idling

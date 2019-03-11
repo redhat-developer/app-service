@@ -53,7 +53,9 @@
   name = "github.com/sergi/go-diff"
   revision = "da645544ed44df016359bd4c0e3dc60ee3a0da43"
 
-  
+[[override]]
+  name = "github.com/golangci/golangci-lint"
+  version = "1.15.0"
 
 [prune]
   go-tests = true
