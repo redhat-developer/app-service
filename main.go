@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -23,6 +24,7 @@ func HandlerCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	t.Input = cr
 	dF, err := t.Convert()
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"response": "devfile creation failed " + err.Error(),
 		})
@@ -32,6 +34,7 @@ func HandlerCreateWorkspace(w http.ResponseWriter, r *http.Request) {
 	client := che_client.CheDefaultClient()
 	resp, err := client.CreateWorkspace(dF.String())
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"response": "devfile creation failed " + err.Error(),
 		})
@@ -51,6 +54,7 @@ func HandlerGenerateDevfile(w http.ResponseWriter, r *http.Request) {
 	t.Input = cr
 	dF, err := t.Convert()
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"response": "devfile creation failed " + err.Error(),
 		})
@@ -60,8 +64,10 @@ func HandlerGenerateDevfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	port := ":8000"
 	r := mux.NewRouter()
-	r.HandleFunc("/api/workspace/{component_name}", HandlerCreateWorkspace).Methods("PUT")
-	r.HandleFunc("/api/devfile/{component_name}", HandlerGenerateDevfile).Methods("GET")
-	log.Fatal(http.ListenAndServe(":8000", r))
+	r.HandleFunc("/api/component/{component_name}/workspace", HandlerCreateWorkspace).Methods("PUT")
+	r.HandleFunc("/api/component/{component_name}/devfile", HandlerGenerateDevfile).Methods("GET")
+	fmt.Println("Started App Service at " + port)
+	log.Fatal(http.ListenAndServe(port, r))
 }
