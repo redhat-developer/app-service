@@ -22,7 +22,7 @@ func TestAppServer_HandleStatus(t *testing.T) {
 				code: http.StatusOK,
 				body: body{
 					goldenFile: goldenFile{
-						path: filepath.Join(testDir, "200_ok.res.body.json"),
+						path: filepath.Join(testDir, "200_ok_json.res.body.json"),
 						opts: testutils.CompareOptions{UUIDAgnostic: true, DateTimeAgnostic: true},
 					},
 				},
@@ -31,7 +31,8 @@ func TestAppServer_HandleStatus(t *testing.T) {
 						"Content-Type": "application/json",
 					},
 					goldenFile: goldenFile{
-						path: filepath.Join(testDir, "200_ok.res.headers.json"),
+						path: filepath.Join(testDir, "200_ok_json.res.headers.json"),
+						opts: testutils.CompareOptions{MarshalInputAsJSON: true},
 					},
 				},
 			},
@@ -46,7 +47,7 @@ func TestAppServer_HandleStatus(t *testing.T) {
 				code: http.StatusOK,
 				body: body{
 					goldenFile: goldenFile{
-						path: filepath.Join(testDir, "200_ok.res.body.yaml"),
+						path: filepath.Join(testDir, "200_ok_yaml.res.body.yaml"),
 						opts: testutils.CompareOptions{UUIDAgnostic: true, DateTimeAgnostic: true},
 					},
 				},
@@ -55,7 +56,8 @@ func TestAppServer_HandleStatus(t *testing.T) {
 						"Content-Type": "application/yaml",
 					},
 					goldenFile: goldenFile{
-						path: filepath.Join(testDir, "200_ok.res.headers.yaml"),
+						path: filepath.Join(testDir, "200_ok_yaml.res.headers.json"),
+						opts: testutils.CompareOptions{MarshalInputAsJSON: true},
 					},
 				},
 			},

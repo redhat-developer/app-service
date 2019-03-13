@@ -15,7 +15,6 @@ import (
 	errs "github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"github.com/stretchr/testify/require"
 )
 
 var updateGoldenFiles = flag.Bool("update", false, "when set, rewrite the golden files")
@@ -50,7 +49,9 @@ type CompareOptions struct {
 // first must run them with the -update flag in order to create an initial
 // golden version.
 func CompareWithGolden(t *testing.T, goldenFile string, actualObj interface{}, opts CompareOptions) {
-	require.NoError(t, testableCompareWithGolden(*updateGoldenFiles, goldenFile, actualObj, opts))
+	if err := testableCompareWithGolden(*updateGoldenFiles, goldenFile, actualObj, opts); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testableCompareWithGolden(update bool, goldenFile string, actualObj interface{}, opts CompareOptions) error {
@@ -71,6 +72,8 @@ func testableCompareWithGolden(update bool, goldenFile string, actualObj interfa
 			actual = t
 		case string:
 			actual = []byte(t)
+		default:
+			return errs.Errorf("don't know how to convert type of object %[1]T to string: %+[1]v (consider enabling MarshalInputAsJSON option)", actualObj)
 		}
 	}
 	if update {

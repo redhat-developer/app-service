@@ -2,7 +2,6 @@ package appserver_test
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -111,7 +110,6 @@ func runHandlerTests(t *testing.T, tt []testcase) {
 				testutils.CompareWithGolden(t, tc.res.body.goldenFile.path, rr.Body.String(), tc.res.body.goldenFile.opts)
 			}
 			if tc.res.headers.goldenFile.path != "" {
-				fmt.Printf("\n\nOK\n\n")
 				testutils.CompareWithGolden(t, tc.res.headers.goldenFile.path, rr.Header(), tc.res.headers.goldenFile.opts)
 			}
 		})
