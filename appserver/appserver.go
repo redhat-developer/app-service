@@ -1,5 +1,6 @@
-// Package appserver provides a Server structure that let's you package things you
-// need all around your service
+// Package appserver provides a Server structure that let's you package things
+// you need all around your service (e.g. configuration, HTTP mgmt, logging,
+// routing, etc.)
 package appserver
 
 import (
@@ -19,7 +20,9 @@ import (
 var (
 	// Commit current build commit set by build script
 	Commit = "0"
-	// BuildTime set by build script in ISO 8601 (UTC) format: YYYY-MM-DDThh:mm:ssTZD (see https://www.w3.org/TR/NOTE-datetime for details)
+	// BuildTime set by build script in ISO 8601 (UTC) format:
+	// YYYY-MM-DDThh:mm:ssTZD (see https://www.w3.org/TR/NOTE-datetime for
+	// details)
 	BuildTime = "0"
 	// StartTime in ISO 8601 (UTC) format
 	StartTime = time.Now().UTC().Format("2006-01-02T15:04:05Z")
@@ -53,7 +56,10 @@ func New(configFilePath string) (*AppServer, error) {
 		WriteTimeout: srv.config.GetHTTPWriteTimeout(),
 		ReadTimeout:  srv.config.GetHTTPReadTimeout(),
 		IdleTimeout:  srv.config.GetHTTPIdleTimeout(),
-		Handler:      handlers.LoggingHandler(os.Stdout, srv.router),
+		Handler:      handlers.CombinedLoggingHandler(os.Stdout, srv.router),
+	}
+	if srv.config.GetHTTPCompressResponses() {
+		srv.router.Use(handlers.CompressHandler)
 	}
 	return srv, nil
 }
@@ -79,11 +85,14 @@ func (srv *AppServer) Router() *mux.Router {
 }
 
 // GetRegisteredRoutes returns all registered routes formatted with their
-// methods, paths, queries and names.
+// methods, paths, queries and names. It is a good idea to print this
+// information on server start to give you an idea of what routes are
+// available in the system.
 func (srv *AppServer) GetRegisteredRoutes() (string, error) {
 	var sb strings.Builder
 	err := srv.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		sb.WriteString("ROUTE: ")
+
+		sb.WriteString("\nROUTE: ")
 		pathTemplate, err := route.GetPathTemplate()
 		if err == nil {
 			sb.WriteString("\tPath template: ")

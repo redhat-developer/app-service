@@ -70,7 +70,7 @@ func gracefulShutdown(hs *http.Server, logger *log.Logger, timeout time.Duration
 	// (Ctrl+/). SIGKILL, SIGQUIT will not be caught.
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	sigReceived := <-stop
-	logger.Printf("interrupt received: %+v", sigReceived)
+	logger.Printf("Signal received: %+v", sigReceived)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

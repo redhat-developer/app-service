@@ -3,7 +3,6 @@
 package configuration
 
 import (
-	"crypto/rsa"
 	"strings"
 	"time"
 
@@ -56,9 +55,7 @@ const (
 // Registry encapsulates the Viper configuration registry which stores the
 // configuration data in-memory.
 type Registry struct {
-	v               *viper.Viper
-	tokenPublicKey  *rsa.PublicKey
-	tokenPrivateKey *rsa.PrivateKey
+	v *viper.Viper
 }
 
 // New creates a configuration reader object using a configurable configuration
@@ -99,7 +96,7 @@ func (c *Registry) setConfigDefaults() {
 }
 
 // GetHTTPAddress returns the HTTP address (as set via default, config file, or
-// environment variable) that the wit server binds to (e.g. "0.0.0.0:8080")
+// environment variable) that the app-server binds to (e.g. "0.0.0.0:8080")
 func (c *Registry) GetHTTPAddress() string {
 	return c.v.GetString(varHTTPAddress)
 }

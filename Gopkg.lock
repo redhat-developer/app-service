@@ -94,6 +94,14 @@
   version = "v1.7.0"
 
 [[projects]]
+  digest = "1:f7463b67871bf7fe475e2c69fb0d21ead07de5188b8d7f8abf8fc961965ed841"
+  name = "github.com/gorilla/schema"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d0e4c24cff97ae983e9847e0ed5a02dc10013d41"
+  version = "v1.0.2"
+
+[[projects]]
   digest = "1:2be5a35f0c5b35162c41bb24971e5dcf6ce825403296ee435429cdcc4e1e847e"
   name = "github.com/hashicorp/go-immutable-radix"
   packages = ["."]
@@ -288,11 +296,13 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/davecgh/go-spew/spew",
     "github.com/fabric8-services/fabric8-wit/log",
     "github.com/fabric8-services/fabric8-wit/resource",
     "github.com/ghodss/yaml",
     "github.com/gorilla/handlers",
     "github.com/gorilla/mux",
+    "github.com/gorilla/schema",
     "github.com/pkg/errors",
     "github.com/satori/go.uuid",
     "github.com/sergi/go-diff/diffmatchpatch",
