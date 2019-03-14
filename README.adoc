@@ -93,7 +93,3 @@ make clean:: Removes all build and tests artifacts from `./out` and removes the 
 make docker-image:: Creates a docker image called `redhat-developer/boilerplate-app:${GIT_COMMIT_ID}-dirty`. There's no need to change the name of the `redhat-developer/boilerplate-app` to something else. If you've checked out the project in `${GOPATH}/src/github.com/myorg/myrepo`, then your image will  automatically be called `myorg/myrepo:${GIT_COMMIT_ID}-dirty`. Notice, that the `-dirty` extension is only there if you've untracked changes in your local directory.
 
 make docker-run:: This target depends on `make docker-image` so it runs it before doing anything else. Then it runs the created image in the foreground and publishes the service's default port 8080 to the host. This is probably the easiest way to run try out the application server without the need to have all the tools available that are required to build the project. Once the service is up you can run `curl 0.0.0.0:8001/status?format=yaml` to check that it works.
-
-make add-handler-stub HANDLER_PATH="/foo/bar" HANDLER_NAME="myhandler":: adds a handler for the given `PATH`. After running this, check the output of `git status` and `git diff` to see what changes were applied.
-
-If you want to see what commands are executed before they are being run by `make` you can set `VERBOSE=1`, i.e. `make VERBOSE=1 test-coverage`. 

@@ -1,0 +1,1 @@
+srv.router.HandleFunc("{{.Path}}", srv.Handle{{.HandlerName}}()).Name("{{.HandlerName}}").Methods("POST")

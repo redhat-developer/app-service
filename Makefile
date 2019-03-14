@@ -82,10 +82,6 @@ docker-image: Dockerfile
 docker-run: docker-image
 	$(Q)docker run -it --rm -p 8080:8080 ${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID}
 
-.PHONY: add-handler-stub
-add-handler-stub:
-	$(Q)go run hack/ 
-
 ./out/app-server: ./vendor $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 	$(Q)go build -v ${LDFLAGS} -o ./out/app-server
 

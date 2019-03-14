@@ -63,3 +63,6 @@ func (p templateParams) handlerFileName() string {
 func (p templateParams) handlerTestFileName() string {
 	return "../../appserver/handle_" + strcase.ToSnake(p.HandlerName) + "_test.go"
 }
+
+func (p templateParams) handlerTemplateFileName() string     { return "handle_post.go.tpl" }
+func (p templateParams) handlerTestTemplateFileName() string { return "handle_post_test.go.tpl" }

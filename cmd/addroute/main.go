@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -23,9 +23,9 @@ var funcMap = template.FuncMap{
 
 func main() {
 	// parse flags
-	p := &templateParams{}
+	p := templateParams{}
 	flag.StringVar(&p.HandlerName, "name", "", "name of the handler")
-	flag.StringVar(&p.Path, "basePath", "", "optional: /path/to/the/endpoint (defaults to: /handler_name)")
+	flag.StringVar(&p.Path, "path", "", "optional: /path/to/the/endpoint (defaults to: /handler_name)")
 	flag.BoolVar(&p.OptsOverride, "override", false, "optional: forces override of generated files (defaults to: false)")
 	flag.BoolVar(&p.OptsCleanupOnFailure, "cleanupOnFailure", false, "optional: deletes generated files if an error happened (defaults to: false)")
 	flag.Parse()
@@ -37,40 +37,74 @@ func main() {
 
 	log.Println(p.String())
 
-	if err := writeHandlerCode(p); err != nil {
-		log.Println("failed to write handler code: ", err)
+	// create output files for handler and it's test
+
+	handlerFile, err := ioutil.TempFile(".", "")
+	if err != nil {
+		log.Printf("failed to create temporary handler file: %+v\n", err)
 		os.Exit(1)
 	}
-}
+	log.Printf("created temporary handler file: %q", handlerFile.Name())
 
-func writeHandlerCode(p *templateParams) error {
-	fileName := p.handlerFileName()
-	// prevent overwriting
+	handlerTestFile, err := ioutil.TempFile(".", "")
+	if err != nil {
+		log.Printf("failed to create temporary handler test file: %+v\n", err)
+		os.Exit(1)
+	}
+	log.Printf("created temporary handler test file: %q\n", handlerTestFile.Name())
+
+	// generate handler and it's test code
+
+	if err = generate(handlerFile, p, p.handlerTemplateFileName()); err != nil {
+		log.Printf("failed to create handler code: %+v\n", err)
+		os.Exit(1)
+	}
+
+	if err = generate(handlerTestFile, p, p.handlerTestTemplateFileName()); err != nil {
+		log.Printf("failed to create handler test code: %+v\n", err)
+		os.Exit(1)
+	}
+
+	// Move temporary files to final destination
+
 	if !p.OptsOverride {
-		if _, err := os.Stat(fileName); err != nil {
-			if os.IsExist(err) {
-				return errs.Wrapf(err, "file already exists: %s", fileName)
-			}
+		if fileExists(p.handlerFileName()) {
+			log.Printf("cannot move %q to %q because the target file already exists and you explicitly requested not to override\n", handlerFile.Name(), p.handlerFileName())
+			os.Exit(1)
 		}
 	}
-	outFile, err := os.Create(fileName)
+	err = os.Rename(handlerFile.Name(), p.handlerFileName())
 	if err != nil {
-		return errs.Wrapf(err, "failed to create file %q", fileName)
+		log.Printf("failed to move %q to %q: %+v\n", handlerFile.Name(), p.handlerFileName(), err)
 	}
-	defer outFile.Close()
-	err = generate(outFile, p)
-	if err != nil {
-		if p.OptsCleanupOnFailure {
-			os.Remove(fileName)
+
+	if !p.OptsOverride {
+		if fileExists(p.handlerTestFileName()) {
+			log.Printf("cannot move %q to %q because the target file already exists and you explicitly requested not to override\n", handlerTestFile.Name(), p.handlerTestFileName())
+			os.Exit(1)
 		}
-		return errs.Wrapf(err, "failed to generate %q", fileName)
 	}
-	return nil
+	os.Rename(handlerTestFile.Name(), p.handlerTestFileName())
+	if err != nil {
+		log.Printf("failed to move %q to %q: %+v\n", handlerTestFile.Name(), p.handlerTestFileName(), err)
+	}
 }
 
-func generate(outFile *os.File, p *templateParams) error {
-	tmplName := filepath.Base(outFile.Name())
-	tmpl := template.Must(template.New(tmplName).Funcs(funcMap).ParseFiles(outFile.Name()))
-	err := tmpl.Execute(outFile, p)
+// fileExists checks if a file exists and is not a directory before we
+// try using it to prevent further errors.
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func generate(outFile *os.File, p templateParams, templateFile string) error {
+	tmpl, err := template.New(templateFile).Funcs(funcMap).ParseFiles(templateFile)
+	if err != nil {
+		return errs.Wrapf(err, "failed to parse template file %q", templateFile)
+	}
+	err = tmpl.Execute(outFile, p)
 	return errs.Wrap(err, "failed to execute template")
 }

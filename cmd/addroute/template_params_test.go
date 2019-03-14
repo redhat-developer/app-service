@@ -49,6 +49,11 @@ func Test_templateParams_sanitize(t *testing.T) {
 			before: templateParams{HandlerName: "foo bar", Path: "/foo/{bar}/"},
 			after:  templateParams{HandlerName: "FooBar", Path: "/foo/{bar}"},
 		},
+		{
+			name:   "given path",
+			before: templateParams{HandlerName: "myFooBarTestHandler"},
+			after:  templateParams{HandlerName: "MyFooBarTestHandler", Path: "/my_foo_bar_test_handler"},
+		},
 	}
 	for _, tc := range tt {
 		// capture range variable to allow for parallel testing

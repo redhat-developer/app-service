@@ -12,10 +12,6 @@ func (srv *AppServer) SetupRoutes() error {
 			Name("status").
 			Methods("GET")
 
-		srv.router.HandleFunc("/hello/{language:(?:english|german)}", srv.HandleHello()).
-			Name("hello").
-			Methods("POST")
-
 		// ADD YOUR OWN ROUTES HERE
 	})
 	return err
