@@ -94,14 +94,6 @@
   version = "v1.7.0"
 
 [[projects]]
-  digest = "1:f7463b67871bf7fe475e2c69fb0d21ead07de5188b8d7f8abf8fc961965ed841"
-  name = "github.com/gorilla/schema"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "d0e4c24cff97ae983e9847e0ed5a02dc10013d41"
-  version = "v1.0.2"
-
-[[projects]]
   digest = "1:2be5a35f0c5b35162c41bb24971e5dcf6ce825403296ee435429cdcc4e1e847e"
   name = "github.com/hashicorp/go-immutable-radix"
   packages = ["."]
@@ -135,6 +127,13 @@
   pruneopts = "UT"
   revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:89cd2208bdeb192cc83ee287216af3c987fc87a90b9087718ad6631b636cefcf"
+  name = "github.com/iancoleman/strcase"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3605ed457bf7f8caa1371b4fafadadc026673479"
 
 [[projects]]
   digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
@@ -302,7 +301,7 @@
     "github.com/ghodss/yaml",
     "github.com/gorilla/handlers",
     "github.com/gorilla/mux",
-    "github.com/gorilla/schema",
+    "github.com/iancoleman/strcase",
     "github.com/pkg/errors",
     "github.com/satori/go.uuid",
     "github.com/sergi/go-diff/diffmatchpatch",

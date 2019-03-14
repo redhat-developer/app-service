@@ -53,6 +53,10 @@
   name = "github.com/sergi/go-diff"
   revision = "da645544ed44df016359bd4c0e3dc60ee3a0da43"
 
+[[constraint]]
+  name = "github.com/iancoleman/strcase"
+  revision = "3605ed457bf7f8caa1371b4fafadadc026673479"
+
 [[override]]
   name = "github.com/golangci/golangci-lint"
   version = "1.15.0"
