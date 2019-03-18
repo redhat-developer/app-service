@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	errs "github.com/pkg/errors"
-	"github.com/kwk/boilerplate-app/configuration"
+	"github.com/redhat-developer/app-service/configuration"
 )
 
 var (

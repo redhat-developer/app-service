@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kwk/boilerplate-app/configuration"
-	"github.com/kwk/boilerplate-app/testutils"
+	"github.com/redhat-developer/app-service/configuration"
+	"github.com/redhat-developer/app-service/testutils"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kwk/boilerplate-app/appserver"
-	"github.com/kwk/boilerplate-app/configuration"
+	"github.com/redhat-developer/app-service/appserver"
+	"github.com/redhat-developer/app-service/configuration"
 )
 
 func main() {

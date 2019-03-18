@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kwk/boilerplate-app/testutils"
+	"github.com/redhat-developer/app-service/testutils"
 )
 
 func TestAppServer_{{.HandlerName}}(t *testing.T) {

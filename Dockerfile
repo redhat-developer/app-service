@@ -3,7 +3,7 @@ LABEL maintainer "Devtools <devtools@redhat.com>"
 LABEL author "Konrad Kleine <kkleine@redhat.com>"
 ENV LANG=en_US.utf8
 ENV GOPATH /tmp/go
-ARG GO_PACKAGE_PATH=github.com/kwk/boilerplate-app
+ARG GO_PACKAGE_PATH=github.com/redhat-developer/app-service
 ARG VERBOSE
 
 RUN yum install epel-release -y \
@@ -43,7 +43,7 @@ ENV LANG=en_US.utf8
 ENV APP_INSTALL_PREFIX=/usr/local/app-server
 
 ENV GOPATH=/tmp/go
-ARG GO_PACKAGE_PATH=github.com/kwk/boilerplate-app
+ARG GO_PACKAGE_PATH=github.com/redhat-developer/app-service
 
 # Create a non-root user and a group with the same name: "appserver"
 ENV APP_USER_NAME=appserver
