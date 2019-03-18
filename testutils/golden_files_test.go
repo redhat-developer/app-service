@@ -230,7 +230,9 @@ func TestGoldenCompareWithGolden(t *testing.T) {
 
 	t.Run("comparing with existing file", func(t *testing.T) {
 		// given
-		f := "golden-files/dummy.golden.json"
+		tempFile, err := ioutil.TempFile(".", "")
+		require.NoError(t, err)
+		f := tempFile.Name()
 		bs, err := json.MarshalIndent(dummy, "", "  ")
 		require.NoError(t, err)
 		err = ioutil.WriteFile(f, bs, os.ModePerm)
