@@ -5,13 +5,11 @@ import (
 	"net/http"
 
 	"github.com/ghodss/yaml"
-	"github.com/redhat-developer/boilerplate-app/routeanalysis"
 )
 
 // HandleStatus returns the handler function for the /status endpoint
 func (srv *AppServer) HandleStatus() http.HandlerFunc {
 	response := struct {
-		routeanalysis.Response200OK
 		Commit    string `json:"commit"`
 		BuildTime string `json:"build_time"`
 		StartTime string `json:"start_time"`
