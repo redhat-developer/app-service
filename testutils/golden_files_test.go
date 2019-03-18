@@ -212,13 +212,15 @@ func TestGoldenCompareWithGolden(t *testing.T) {
 		})
 		t.Run("mismatch between expected and actual output", func(t *testing.T) {
 			// given
-			f := "../appserver/golden-files/status/ok.json"
+			f, err := ioutil.TempFile(".", "")
+			require.NoError(t, err)
+			defer os.Remove(f.Name())
 			// when
 			var data interface{} = dummy
 			if !opts.MarshalInputAsJSON {
 				data = dummyStr
 			}
-			err := testableCompareWithGolden(false, f, data, opts)
+			err = testableCompareWithGolden(false, f.Name(), data, opts)
 			// then
 			require.Error(t, err)
 			_, isPathError := errs.Cause(err).(*os.PathError)

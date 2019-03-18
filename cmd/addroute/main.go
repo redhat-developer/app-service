@@ -44,6 +44,7 @@ func main() {
 		log.Printf("failed to create temporary handler file: %+v\n", err)
 		os.Exit(1)
 	}
+	defer os.Remove(handlerFile.Name())
 	log.Printf("created temporary handler file: %q", handlerFile.Name())
 
 	handlerTestFile, err := ioutil.TempFile(".", "")
@@ -51,6 +52,7 @@ func main() {
 		log.Printf("failed to create temporary handler test file: %+v\n", err)
 		os.Exit(1)
 	}
+	defer os.Remove(handlerTestFile.Name())
 	log.Printf("created temporary handler test file: %q\n", handlerTestFile.Name())
 
 	// generate handler and it's test code

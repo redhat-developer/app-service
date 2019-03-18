@@ -5,9 +5,3 @@ ROUTE: 	Path template: /status
 	Queries templates: format={format:(?:json|yaml)}
 	Queries regexps: ^format=(?P<v0>(?:json|yaml))$
 	Methods: GET
-ROUTE: 	Path template: /hello/{language:(?:english|german)}
-	Name: hello
-	Path regexp: ^/hello/(?P<v0>(?:english|german))$
-	Queries templates: 
-	Queries regexps: 
-	Methods: POST

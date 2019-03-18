@@ -25,12 +25,24 @@ func TestMainFunc(t *testing.T) {
 	// 	}
 	// }(p)
 	// io.Stat(handlerFileName(""))
+
 	os.Args = []string{
 		"noop",
 		"-name=" + p.HandlerName,
 		"-path=" + p.Path,
+		"-override",
 	}
+
 	main()
+
+	if fileExists("../../appserver/handle_my_hello_world.go") {
+		err := os.Remove("../../appserver/handle_my_hello_world.go")
+		require.NoError(t, err)
+	}
+	if fileExists("../../appserver/handle_my_hello_world_test.go") {
+		err := os.Remove("../../appserver/handle_my_hello_world_test.go")
+		require.NoError(t, err)
+	}
 }
 
 func Test_generate(t *testing.T) {
