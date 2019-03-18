@@ -5,6 +5,7 @@
 :sectnums:
 :experimental:
 
+image:https://travis-ci.org/kwk/boilerplate-app.svg?branch=master["Build Status", link="https://travis-ci.org/kwk/boilerplate-app"]
 image:https://goreportcard.com/badge/github.com/kwk/boilerplate-app[Go Report Card, link="https://goreportcard.com/report/github.com/kwk/boilerplate-app"]
 image:https://godoc.org/github.com/kwk/boilerplate-app?status.png[GoDoc,link="https://godoc.org/github.com/kwk/boilerplate-app"]
 image:https://codecov.io/gh/kwk/boilerplate-app/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/kwk/boilerplate-app"]
