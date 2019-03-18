@@ -64,7 +64,7 @@ test: ./vendor
 	$(Q)go test ${V_FLAG} ./... -failfast
 
 .PHONY: test-coverage
-test-coverage: ./vendor ./out/cover.out
+test-coverage: ./out/cover.out
 
 .PHONY: test-coverage-html
 test-coverage-html: ./vendor ./out/cover.out
@@ -82,11 +82,15 @@ docker-image: Dockerfile
 docker-run: docker-image
 	$(Q)docker run -it --rm -p 8080:8080 ${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID}
 
+.PHONY: codecov
+codecov: ./out/cover.out
+	$(Q)CODECOV_TOKEN="aecd131f-d078-4b17-ab98-525cd5f49cbe" bash <(curl -s https://codecov.io/bash)
+
 ./out/app-server: ./vendor $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 	$(Q)go build -v ${LDFLAGS} -o ./out/app-server
 
 ./vendor: Gopkg.toml Gopkg.lock
 	$(Q)dep ensure ${V_FLAG} -vendor-only
 
-./out/cover.out:
-	$(Q)go test ${V_FLAG} ./... -failfast -coverprofile=cover.out -covermode=set -outputdir=./out	
+./out/cover.out: ./vendor
+	$(Q)go test ${V_FLAG} -race ./... -failfast -coverprofile=cover.out -covermode=atomic -outputdir=./out
