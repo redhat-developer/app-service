@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/redhat-developer/boilerplate-app/testutils"
+	"github.com/kwk/boilerplate-app/testutils"
 )
 
 func TestAppServer_HandleStatus(t *testing.T) {

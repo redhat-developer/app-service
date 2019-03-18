@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/redhat-developer/boilerplate-app/testutils"
+	"github.com/kwk/boilerplate-app/testutils"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"

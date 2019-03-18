@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/redhat-developer/boilerplate-app/appserver"
-	"github.com/redhat-developer/boilerplate-app/configuration"
-	"github.com/redhat-developer/boilerplate-app/testutils"
+	"github.com/kwk/boilerplate-app/appserver"
+	"github.com/kwk/boilerplate-app/configuration"
+	"github.com/kwk/boilerplate-app/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

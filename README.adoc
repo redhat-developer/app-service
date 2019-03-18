@@ -5,10 +5,9 @@
 :sectnums:
 :experimental:
 
-image:https://ci.centos.org/buildStatus/icon?job=devtools-fabric8-wit-build-master[Jenkins,link="https://ci.centos.org/view/Devtools/job/devtools-fabric8-wit-build-master/lastBuild/"]
-image:https://goreportcard.com/badge/github.com/redhat-developer/boilerplate-app[Go Report Card, link="https://goreportcard.com/report/github.com/redhat-developer/boilerplate-app"]
-image:https://godoc.org/github.com/redhat-developer/boilerplate-app?status.png[GoDoc,link="https://godoc.org/github.com/redhat-developer/boilerplate-app"]
-image:https://codecov.io/gh/redhat-developer/boilerplate-app/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/redhat-developer/boilerplate-app"]
+image:https://goreportcard.com/badge/github.com/kwk/boilerplate-app[Go Report Card, link="https://goreportcard.com/report/github.com/kwk/boilerplate-app"]
+image:https://godoc.org/github.com/kwk/boilerplate-app?status.png[GoDoc,link="https://godoc.org/github.com/kwk/boilerplate-app"]
+image:https://codecov.io/gh/kwk/boilerplate-app/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/kwk/boilerplate-app"]
 
 
 This project provides the code to build a HTTP-REST server with some good defaults and features already configfured. Among those are:
@@ -28,10 +27,10 @@ All scenarios below require you to clone an navigate to your code:
 [source,bash]
 ----
 # Clone the project
-git clone https://github.com/redhat-developer/boilerplate-app ${GOPATH}/src/github.com/redhat-developer/boilerplate-app
+git clone https://github.com/kwk/boilerplate-app ${GOPATH}/src/github.com/kwk/boilerplate-app
 
 # Navigate to the project
-cd ${GOPATH}/src/github.com/redhat-developer/boilerplate-app
+cd ${GOPATH}/src/github.com/kwk/boilerplate-app
 ----
 
 == Scenario: Using docker
@@ -90,6 +89,6 @@ make test-coverage-html:: Opens a browser to show you the annotated source code 
 
 make clean:: Removes all build and tests artifacts from `./out` and removes the `./vendor` directory.
 
-make docker-image:: Creates a docker image called `redhat-developer/boilerplate-app:${GIT_COMMIT_ID}-dirty`. There's no need to change the name of the `redhat-developer/boilerplate-app` to something else. If you've checked out the project in `${GOPATH}/src/github.com/myorg/myrepo`, then your image will  automatically be called `myorg/myrepo:${GIT_COMMIT_ID}-dirty`. Notice, that the `-dirty` extension is only there if you've untracked changes in your local directory.
+make docker-image:: Creates a docker image called `kwk/boilerplate-app:${GIT_COMMIT_ID}-dirty`. There's no need to change the name of the `kwk/boilerplate-app` to something else. If you've checked out the project in `${GOPATH}/src/github.com/myorg/myrepo`, then your image will  automatically be called `myorg/myrepo:${GIT_COMMIT_ID}-dirty`. Notice, that the `-dirty` extension is only there if you've untracked changes in your local directory.
 
 make docker-run:: This target depends on `make docker-image` so it runs it before doing anything else. Then it runs the created image in the foreground and publishes the service's default port 8080 to the host. This is probably the easiest way to run try out the application server without the need to have all the tools available that are required to build the project. Once the service is up you can run `curl 0.0.0.0:8001/status?format=yaml` to check that it works.
