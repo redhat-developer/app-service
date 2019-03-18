@@ -6,5 +6,8 @@ go:
   - 1.12.x
   - tip
 
+before_install:
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
 script:
   - make VERBOSE=1 codecov
