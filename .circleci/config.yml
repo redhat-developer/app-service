@@ -9,4 +9,4 @@ jobs:
       - checkout
       - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
       - run: make VERBOSE=1
-      - run: make VERBOSE=1 test
+      - run: make VERBOSE=1 codecov
