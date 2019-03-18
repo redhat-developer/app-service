@@ -84,7 +84,7 @@ docker-run: docker-image
 
 .PHONY: codecov
 codecov: ./out/cover.out
-	$(Q)CODECOV_TOKEN="aecd131f-d078-4b17-ab98-525cd5f49cbe" bash <(curl -s https://codecov.io/bash)
+	$(Q)CODECOV_TOKEN="c2340826-e1f9-4c12-a2b1-f1e98b3a040e" bash <(curl -s https://codecov.io/bash)
 
 ./out/app-server: ./vendor $(shell find . -path ./vendor -prune -o -name '*.go' -print)
 	$(Q)go build -v ${LDFLAGS} -o ./out/app-server
