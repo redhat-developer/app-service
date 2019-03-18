@@ -13,7 +13,7 @@ image:https://codecov.io/gh/redhat-developer/app-service/branch/master/graph/bad
 
 This project provides the code to build a HTTP-REST server with some good defaults and features already configfured. Among those are:
 
- * a `/status/yaml` and `/status/json` endpoint for health-checking the server
+ * a `/status?format=yaml` and `/status?format=json` endpoint for health-checking the server
  * graceful shutdown of HTTP server
  * Apache combined logging output
  * porwerful configuration with defaults
