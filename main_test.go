@@ -11,6 +11,9 @@ import (
 )
 
 func TestMainFunc(t *testing.T) {
+	// TODO(kwk): This test should be improved but for now it gives a short
+	// overview of how one can call main with arguments.
+
 	os.Args = []string{
 		"noop",
 	}
