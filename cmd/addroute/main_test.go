@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -46,27 +47,25 @@ func TestMainFunc(t *testing.T) {
 }
 
 func Test_generate(t *testing.T) {
-	// // create temp file to write out generated output to
-	// f, err := ioutil.TempFile("", "my_foo_bar_test_handler.go")
-	// require.NoError(t, err)
-	// t.Logf("created temporary file: %q", f.Name())
-	// defer func(f *os.File) {
-	// 	t.Logf("deleting temporary file: %q", f.Name())
-	// 	err := os.Remove(f.Name())
-	// 	require.NoError(t, err, "failed to delete temporary file: %q", f.Name())
-	// }(f)
-	f := os.Stdout
-	var err error
+	// create temp files to write out generated output to
+	handlerFile, err := ioutil.TempFile(".", "my_foo_barhandler.go")
+	require.NoError(t, err)
+	defer os.Remove(handlerFile.Name())
+
+	handlerTestFile, err := ioutil.TempFile(".", "my_foo_barhandler_test.go")
+	require.NoError(t, err)
+	defer os.Remove(handlerTestFile.Name())
 
 	p := templateParams{HandlerName: "myFooBarTest\nHandler", Path: "/my/foo/bar/test/handler"}
 	err = p.sanitize()
 	require.NoError(t, err)
+
 	t.Run("template:"+p.handlerTemplateFileName(), func(t *testing.T) {
-		err := generate(f, p, p.handlerTemplateFileName())
+		err := generate(handlerFile, p, p.handlerTemplateFileName())
 		require.NoError(t, err)
 	})
 	t.Run("template:"+p.handlerTestTemplateFileName(), func(t *testing.T) {
-		err := generate(f, p, p.handlerTestTemplateFileName())
+		err := generate(handlerTestFile, p, p.handlerTestTemplateFileName())
 		require.NoError(t, err)
 	})
 }

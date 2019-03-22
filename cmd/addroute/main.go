@@ -12,15 +12,6 @@ import (
 	errs "github.com/pkg/errors"
 )
 
-// First we create a FuncMap with which to register the function.
-var funcMap = template.FuncMap{
-	// The name "title" is what the function will be called in the template text.
-	"title":        strings.Title,
-	"toCamel":      strcase.ToCamel,
-	"toLowerCamel": strcase.ToLowerCamel,
-	"toSnake":      strcase.ToSnake,
-}
-
 func main() {
 	// parse flags
 	p := templateParams{}
@@ -103,6 +94,15 @@ func fileExists(filename string) bool {
 }
 
 func generate(outFile *os.File, p templateParams, templateFile string) error {
+	// First we create a FuncMap with which to register the function.
+	var funcMap = template.FuncMap{
+		// The name "title" is what the function will be called in the template text.
+		"title":        strings.Title,
+		"toCamel":      strcase.ToCamel,
+		"toLowerCamel": strcase.ToLowerCamel,
+		"toSnake":      strcase.ToSnake,
+	}
+
 	tmpl, err := template.New(templateFile).Funcs(funcMap).ParseFiles(templateFile)
 	if err != nil {
 		return errs.Wrapf(err, "failed to parse template file %q", templateFile)
