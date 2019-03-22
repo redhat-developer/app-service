@@ -2,13 +2,15 @@
 # executed, verbose flags are turned on and quiet flags are turned off for
 # various commands. Use V_FLAG in places where you can toggle on/off verbosity
 # using -v. Use Q_FLAG in places where you can toggle on/off quiet mode using
-# -q.
+# -q. Use S_FLAG where you want to toggle on/off silence mode using -s.
 Q = @
 Q_FLAG = -q
 V_FLAG =
+S_FLAG = -s
 ifeq ($(VERBOSE),1)
        Q =
        Q_FLAG = 
+       S_FLAG = 
        V_FLAG = -v
 endif
 
@@ -81,6 +83,13 @@ docker-image: Dockerfile
 .PHONY: docker-run
 docker-run: docker-image
 	$(Q)docker run -it --rm -p 8080:8080 ${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID}
+
+.PHONY: docker-test
+docker-test: docker-image
+	$(Q)docker rm -f app-service-test
+	$(Q)docker run --name app-service-test  -dt --rm -p 8123:8080 ${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID}
+	$(Q)curl ${S_FLAG} 0.0.0.0:8123/status?format=yaml
+	$(Q)docker rm -f app-service-test
 
 .PHONY: codecov
 codecov: ./out/cover.out
