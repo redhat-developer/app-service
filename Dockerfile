@@ -4,7 +4,7 @@ LABEL author "Konrad Kleine <kkleine@redhat.com>"
 ENV LANG=en_US.utf8
 ENV GOPATH /tmp/go
 ARG GO_PACKAGE_PATH=github.com/redhat-developer/app-service
-ARG VERBOSE
+ARG VERBOSE=1
 
 RUN yum install epel-release -y \
   && yum install --enablerepo=centosplus install -y --quiet \

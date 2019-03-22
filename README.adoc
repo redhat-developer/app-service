@@ -5,6 +5,7 @@
 :sectnums:
 :experimental:
 
+image:https://quay.io/repository/redhat-developer/app-service/status["Docker Repository on Quay", link="https://quay.io/repository/redhat-developer/app-service"]
 image:https://circleci.com/gh/redhat-developer/app-service/tree/master.svg?style=svg["Build Status", link="https://circleci.com/gh/redhat-developer/app-service/tree/master"]
 image:https://goreportcard.com/badge/github.com/redhat-developer/app-service[Go Report Card, link="https://goreportcard.com/report/github.com/redhat-developer/app-service"]
 image:https://godoc.org/github.com/redhat-developer/app-service?status.png[GoDoc,link="https://godoc.org/github.com/redhat-developer/app-service"]
