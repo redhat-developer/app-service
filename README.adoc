@@ -12,7 +12,7 @@ image:https://godoc.org/github.com/redhat-developer/app-service?status.png[GoDoc
 image:https://codecov.io/gh/redhat-developer/app-service/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/redhat-developer/app-service"]
 
 
-This project provides the code to build a HTTP-REST server with some good defaults and features already configfured. Among those are:
+This project provides the code to build a HTTP-REST server with some good defaults and features already configured. Among those are:
 
  * a `/status?format=yaml` and `/status?format=json` endpoint for health-checking the server
  * graceful shutdown of HTTP server
@@ -61,10 +61,10 @@ These instructions show you all the things you need to build and run the server 
 # Build the server
 make VERBOSE=1 all
 
-# Run tests including coverage anaylsis
+# Run tests including coverage analysis
 make VERBOSE=1 test-coverage
 
-# Run the server and confiugre an HTTP address to listen on
+# Run the server and configure an HTTP address to listen on
 APP_HTTP_ADDRESS=0.0.0.0:8088 ./out/app-server
 ----
 
