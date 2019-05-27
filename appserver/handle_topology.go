@@ -68,11 +68,6 @@ type data struct {
 	nodes []interface{}
 }
 
-/*
-INFO Access the OpenShift web-console here: https://console-openshift-console.apps.tkurian11.devcluster.openshift.com
-INFO Login to the console with user: kubeadmin, password: Dbg96-I7STV-xuR2j-oIw9k
-*/
-
 // HandleTopology returns the handler function for the /status endpoint
 func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
