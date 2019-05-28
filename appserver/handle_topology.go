@@ -150,13 +150,13 @@ func (d data) getEdges() []string {
 
 		for _, target := range targets {
 			for _, source := range sourceObjects {
-
-				targetId, err := json.Marshal(target)
+				var nm nodeMeta
+				err := json.Unmarshal([]byte(source), &nm)
 				if err != nil {
-					k8log.Error(err, "failed to retrieve json encoding of node")
+					k8log.Error(err, "failed to get node data")
 				}
 
-				e, err := json.Marshal(edge{Source: source, Target: string(targetId)})
+				e, err := json.Marshal(edge{Source: nm.Id, Target: target})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -172,7 +172,7 @@ func (d data) getGroups() []string {
 	nodes := make(map[string][]string)
 	var groups []string
 
-	nodes = d.getLabelData("app.kubernetes.io/part-of", "", true)
+	nodes = d.getLabelData("app.kubernetes.io/part-of", "", false)
 
 	for key, value := range nodes {
 		g, err := json.Marshal(group{Id: "1", Name: key, Nodes: value})
@@ -336,7 +336,7 @@ func (d data) formatNodes() []string {
 	return nodes
 }
 
-func (d data) getLabelData(label string, key string, ok bool) map[string][]string {
+func (d data) getLabelData(label string, key string, meta bool) map[string][]string {
 
 	nodes := make(map[string][]string)
 	for _, elem := range d.nodes {
@@ -347,17 +347,18 @@ func (d data) getLabelData(label string, key string, ok bool) map[string][]strin
 				labelValue := dc.Labels[label]
 				var jsn []byte
 				var err error
-				if ok {
-					jsn, err = json.Marshal(dc.UID)
-					if err != nil {
-						k8log.Error(err, "failed to retrieve json encoding of node")
-					}
-				} else {
+				if meta {
 					jsn, err = json.Marshal(nodeMeta{Name: dc.Name, Type: "workload", Id: base64.StdEncoding.EncodeToString([]byte(dc.UID))})
 					if err != nil {
 						k8log.Error(err, "failed to retrieve json encoding of node")
 					}
+				} else {
+					jsn, err = json.Marshal(dc.UID)
+					if err != nil {
+						k8log.Error(err, "failed to retrieve json encoding of node")
+					}
 				}
+
 				if key == "" {
 					nodes[labelValue] = append(nodes[labelValue], string(jsn))
 				} else if key == labelValue {
