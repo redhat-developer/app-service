@@ -22,46 +22,10 @@ import (
 
 var k8log = logf.Log
 
-type resource struct {
-	Metadata string `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Status   string `json:"status,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Name     string `json:"name,name=name"`
-	Kind     string `json:"kind,name=kind"`
-}
-
-type node struct {
-	Id   string
-	Name string
-}
-type nodeData struct {
-	NodeType  string     `json:"nodeType,name=nodeType"`
-	Id        string     `json:"id,name=id"`
-	Resources []resource `json:"resource,omitempty" protobuf:"bytes,1,opt,name=resource"`
-	Data      staticData
-}
-
-type group struct {
-	Id    string
-	Name  string
-	Nodes []string
-}
-
-type edge struct {
-	Source string
-	Target string
-}
-
 type nodeMeta struct {
 	Id   string
 	Name string
 	Type string
-}
-
-type staticData struct {
-	url          string
-	editUrl      string
-	builderImage string
-	donutStatus  string
 }
 
 type data struct {
@@ -156,7 +120,7 @@ func (d data) getEdges() []string {
 					k8log.Error(err, "failed to get node data")
 				}
 
-				e, err := json.Marshal(edge{Source: nm.Id, Target: target})
+				e, err := json.Marshal(topology.Edge{Source: nm.Id, Target: target})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -175,7 +139,7 @@ func (d data) getGroups() []string {
 	nodes = d.getLabelData("app.kubernetes.io/part-of", "", false)
 
 	for key, value := range nodes {
-		g, err := json.Marshal(group{Id: "group:" + key, Name: key, Nodes: value})
+		g, err := json.Marshal(topology.Group{Id: "group:" + key, Name: key, Nodes: value})
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
@@ -228,7 +192,7 @@ func getResources(dc map[string][]string, cl *kubernetes.Clientset, clRoute *rou
 			}
 			resources = append(resources, formatDeploymentConfigs(deploymentConfigs.Items)...)
 
-			nd, err := json.Marshal(nodeData{Id: nm.Id, NodeType: nm.Type, Resources: resources, Data: staticData{url: "dummy_url", editUrl: "dummy_edit_url", builderImage: "deploymentsLabels['app.kubernetes.io/name']", donutStatus: ""}})
+			nd, err := json.Marshal(topology.NodeData{Id: nm.Id, Type: nm.Type, Resources: resources, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: labelKey, DonutStatus: make(map[string]string)}})
 			if err != nil {
 				k8log.Error(err, "failed to retrieve json encoding of node")
 			}
@@ -238,8 +202,8 @@ func getResources(dc map[string][]string, cl *kubernetes.Clientset, clRoute *rou
 	return nodeDatas
 }
 
-func formatDeploymentConfigs(deploymentConfigItems []deploymentconfigv1.DeploymentConfig) []resource {
-	var resources []resource
+func formatDeploymentConfigs(deploymentConfigItems []deploymentconfigv1.DeploymentConfig) []topology.Resource {
+	var resources []topology.Resource
 
 	for _, elem := range deploymentConfigItems {
 		meta, err := json.Marshal(elem.GetObjectMeta())
@@ -250,13 +214,13 @@ func formatDeploymentConfigs(deploymentConfigItems []deploymentconfigv1.Deployme
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of deployment config")
 		}
-		resources = append(resources, resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
+		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
 	}
 	return resources
 }
 
-func formatService(services []corev1.Service) []resource {
-	var resources []resource
+func formatService(services []corev1.Service) []topology.Resource {
+	var resources []topology.Resource
 
 	for _, elem := range services {
 		meta, err := json.Marshal(elem.GetObjectMeta())
@@ -267,13 +231,13 @@ func formatService(services []corev1.Service) []resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of service")
 		}
-		resources = append(resources, resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
+		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
 	}
 	return resources
 }
 
-func formatReplicationControllers(replicaSetItems []corev1.ReplicationController) []resource {
-	var resources []resource
+func formatReplicationControllers(replicaSetItems []corev1.ReplicationController) []topology.Resource {
+	var resources []topology.Resource
 
 	for _, elem := range replicaSetItems {
 		meta, err := json.Marshal(elem.GetObjectMeta())
@@ -284,13 +248,13 @@ func formatReplicationControllers(replicaSetItems []corev1.ReplicationController
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of replication controller")
 		}
-		resources = append(resources, resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
+		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
 	}
 	return resources
 }
 
-func formatRoutes(routeItems []routev1.Route) []resource {
-	var resources []resource
+func formatRoutes(routeItems []routev1.Route) []topology.Resource {
+	var resources []topology.Resource
 
 	for _, elem := range routeItems {
 		meta, err := json.Marshal(elem.GetObjectMeta())
@@ -301,7 +265,7 @@ func formatRoutes(routeItems []routev1.Route) []resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of route")
 		}
-		resources = append(resources, resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
+		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
 	}
 	return resources
 }
@@ -314,7 +278,7 @@ func (d data) formatNodes() []string {
 		case []deploymentconfigv1.DeploymentConfig:
 			deploymentsConfigs := elem.([]deploymentconfigv1.DeploymentConfig)
 			for _, dc := range deploymentsConfigs {
-				n, err := json.Marshal(node{Name: dc.Name, Id: base64.StdEncoding.EncodeToString([]byte(dc.UID))})
+				n, err := json.Marshal(topology.Node{Name: dc.Name, Id: base64.StdEncoding.EncodeToString([]byte(dc.UID))})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -323,7 +287,7 @@ func (d data) formatNodes() []string {
 		case []appsv1.Deployment:
 			deployments := elem.([]appsv1.Deployment)
 			for _, d := range deployments {
-				n, err := json.Marshal(node{Name: d.Name, Id: base64.StdEncoding.EncodeToString([]byte(d.UID))})
+				n, err := json.Marshal(topology.Node{Name: d.Name, Id: base64.StdEncoding.EncodeToString([]byte(d.UID))})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -381,7 +345,6 @@ func (d data) getLabelData(label string, key string, meta bool) map[string][]str
 			}
 		}
 	}
-
 	return nodes
 }
 
@@ -423,6 +386,5 @@ func (d data) getAnnotationData(annotation string) map[string][]string {
 			}
 		}
 	}
-
 	return nodes
 }

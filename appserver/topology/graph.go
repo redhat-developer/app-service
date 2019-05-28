@@ -6,22 +6,22 @@ import (
 )
 
 type Graph struct {
-	Nodes  []node  `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
-	Edges  []edge  `json:"edges,name=edges"`
-	Groups []group `json:"groups,name=groups"`
+	Nodes  []Node  `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
+	Edges  []Edge  `json:"edges,name=edges"`
+	Groups []Group `json:"groups,name=groups"`
 }
 
-type node struct {
+type Node struct {
 	Id   string `json:"id,name=id"`
 	Name string `json:"name,name=name"`
 }
 
-type edge struct {
+type Edge struct {
 	Source string `json:"source, name=source"`
 	Target string `json:"target, name=target"`
 }
 
-type group struct {
+type Group struct {
 	Id    string   `json:"id, name=id"`
 	Name  string   `json:"name, name=name"`
 	Nodes []string `json:"nodes, name=nodes"`
@@ -35,15 +35,15 @@ type Resource struct {
 }
 
 type NodeData struct {
-	NodeType  string     `json:"nodeType,name=nodeType"`
+	Type      string     `json:"type,name=type"`
 	Id        string     `json:"id,name=id"`
 	Resources []Resource `json:"resource,omitempty" protobuf:"bytes,1,opt,name=resource"`
-	Data      data       `json:"data, name=data"`
+	Data      Data       `json:"data, name=data"`
 }
 
 type NodeID string
 
-type data struct {
+type Data struct {
 	Url          string            `json:"url, name=url"`
 	EditUrl      string            `json:"editUrl, name=editUrl"`
 	BuilderImage string            `json:"builderImage, name=builderImage"`
@@ -63,9 +63,9 @@ type VisualizationResponse struct {
 }
 
 func GetSampleTopology(nodes []string, resources map[string]string, groups []string, edges []string) VisualizationResponse {
-	var allNodes []node
+	var allNodes []Node
 	for _, elem := range nodes {
-		dataNode := &node{}
+		dataNode := &Node{}
 		err := json.Unmarshal([]byte(elem), dataNode)
 		fmt.Println(err)
 		allNodes = append(allNodes, *dataNode)
@@ -81,17 +81,17 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 		m[key] = *dataResource
 	}
 
-	var allGroups []group
+	var allGroups []Group
 	for _, elem := range groups {
-		dataNode := &group{}
+		dataNode := &Group{}
 		err := json.Unmarshal([]byte(elem), dataNode)
 		fmt.Println(err)
 		allGroups = append(allGroups, *dataNode)
 	}
 
-	var allEdges []edge
+	var allEdges []Edge
 	for _, elem := range edges {
-		dataNode := &edge{}
+		dataNode := &Edge{}
 		err := json.Unmarshal([]byte(elem), dataNode)
 		fmt.Println(err)
 		allEdges = append(allEdges, *dataNode)
