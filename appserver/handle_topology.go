@@ -127,7 +127,7 @@ func getNodes(clDepConfig *deploymentconfigclientset.AppsV1Client, cl *kubernete
 }
 
 func (d data) getUniqueNodes() map[string][]string {
-	return d.getLabelData("app.kubernetes.io/name", "", false)
+	return d.getLabelData("app.kubernetes.io/name", "", true)
 }
 
 func (d data) getEdges() []string {
@@ -175,7 +175,7 @@ func (d data) getGroups() []string {
 	nodes = d.getLabelData("app.kubernetes.io/part-of", "", false)
 
 	for key, value := range nodes {
-		g, err := json.Marshal(group{Id: "1", Name: key, Nodes: value})
+		g, err := json.Marshal(group{Id: "group:" + key, Name: key, Nodes: value})
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
@@ -200,7 +200,7 @@ func getResources(dc map[string][]string, cl *kubernetes.Clientset, clRoute *rou
 				k8log.Error(err, "failed to list existing replicationControllers")
 			}
 
-			//Replication Controller
+			//Replication Controllers
 			replicationControllers, err := cl.CoreV1().ReplicationControllers(namespace).List(options)
 			if err != nil {
 				k8log.Error(err, "failed to list existing deployment configs")
@@ -228,7 +228,6 @@ func getResources(dc map[string][]string, cl *kubernetes.Clientset, clRoute *rou
 			}
 			resources = append(resources, formatDeploymentConfigs(deploymentConfigs.Items)...)
 
-			//fmt.Println(resources)
 			nd, err := json.Marshal(nodeData{Id: nm.Id, NodeType: nm.Type, Resources: resources, Data: staticData{url: "dummy_url", editUrl: "dummy_edit_url", builderImage: "deploymentsLabels['app.kubernetes.io/name']", donutStatus: ""}})
 			if err != nil {
 				k8log.Error(err, "failed to retrieve json encoding of node")
