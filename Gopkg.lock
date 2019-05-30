@@ -224,15 +224,12 @@
   revision = "3605ed457bf7f8caa1371b4fafadadc026673479"
 
 [[projects]]
-  digest = "1:a0cefd27d12712af4b5018dc7046f245e1e3b5760e2e848c30b171b570708f9b"
   name = "github.com/imdario/mergo"
   packages = ["."]
-  pruneopts = "UT"
   revision = "7c29201646fa3de8506f701213473dd407f19646"
   version = "v0.3.7"
 
 [[projects]]
-  digest = "1:f5a2051c55d05548d2d4fd23d244027b59fbd943217df8aa3b5e170ac2fd6e1b"
   name = "github.com/json-iterator/go"
   packages = ["."]
   pruneopts = "UT"
@@ -724,7 +721,10 @@
     "plugin/pkg/client/auth/exec",
     "rest",
     "rest/watch",
+<<<<<<< HEAD
     "testing",
+=======
+>>>>>>> adding import
     "tools/auth",
     "tools/clientcmd",
     "tools/clientcmd/api",
@@ -737,7 +737,11 @@
     "util/connrotation",
     "util/flowcontrol",
     "util/homedir",
+<<<<<<< HEAD
     "util/integer",
+=======
+    "util/integer"
+>>>>>>> adding import
   ]
   pruneopts = "UT"
   revision = "8d9ed539ba3134352c586810e749e58df4e94e4f"
@@ -777,6 +781,7 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
+<<<<<<< HEAD
   input-imports = [
     "github.com/fabric8-services/fabric8-wit/log",
     "github.com/fabric8-services/fabric8-wit/resource",
@@ -807,5 +812,8 @@
     "k8s.io/client-go/util/homedir",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
   ]
+=======
+  inputs-digest = "5dbfeb897d987519e7b8b44e36ab35779f17d5e2d5858b76b85678d5fe37163f"
+>>>>>>> adding import
   solver-name = "gps-cdcl"
   solver-version = 1
