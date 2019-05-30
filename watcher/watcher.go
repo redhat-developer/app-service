@@ -6,10 +6,10 @@ import (
 )
 
 type Watch struct {
-	Client *kubeclient.KubeClient
+	Client       *kubeclient.KubeClient
 	ResultStream chan watch.Event
-	Namespace string
-	Watchers []watch.Interface
+	Namespace    string
+	Watchers     []watch.Interface
 	WatchFilters []watch.EventType
 }
 
@@ -35,7 +35,7 @@ func (w Watch) StartWatcher() {
 
 func (w Watch) ListenWatcher(onEvent func(obj watch.Event)) {
 	for {
-		obj := <- w.ResultStream
+		obj := <-w.ResultStream
 		for _, v := range w.WatchFilters {
 			if v == obj.Type {
 				onEvent(obj)
@@ -50,9 +50,9 @@ func (w Watch) StopWatch() {
 	}
 }
 
-func sendToChannel(w watch.Interface, ch chan watch.Event)  {
+func sendToChannel(w watch.Interface, ch chan watch.Event) {
 	for {
-		v := <- w.ResultChan()
+		v := <-w.ResultChan()
 		ch <- v
 	}
 }
