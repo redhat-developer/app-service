@@ -96,18 +96,92 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 			clDepConfig, _ := ocappsclient.NewForConfig(&openshiftAPIConfig)
 			clRoute, _ := routeclientset.NewForConfig(&openshiftAPIConfig)
-			resources := getResources(nodes, k.CoreClient, clRoute, clDepConfig, namespace)
+			getResources(nodes, k.CoreClient, clRoute, clDepConfig, namespace)
+			resourceOptsList := getResourcesListOptions(nodes)
+			resourceWatchers := make(map[nodeMeta]*watcher.Watch)
+			nodeDatas := make(map[string]string)
+			nodeDataNotMarshalled := make(map[string]topology.NodeData)
+			//--------------------------------------------------------------
+			//--------------------------------------------------------------
+			for opts, v := range resourceOptsList {
+				newResourceWatch := watcher.NewWatch(namespace,
+					k,
+					k.GetDeploymentConfigWatcher(namespace, opts, onGetWatchError),
+					k.GetReplicationControllerWatcher(namespace, opts, onGetWatchError),
+					k.GetServiceWatcher(namespace, opts, onGetWatchError),
+					k.GetRouteWatcher(namespace, opts, onGetWatchError),
+				)
+				newResourceWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
 
-			result = topology.GetSampleTopology(formattedDc, resources, groups, edges)
-			by, _ := json.Marshal(result)
-			b := bytes.NewBuffer(by)
-
-			w.Header().Set(http.CanonicalHeaderKey("Content-Type"), "application/json")
-			if _, err := b.WriteTo(w); err != nil {
-				fmt.Fprintf(w, "%s", err)
+				resourceWatchers[v] = newResourceWatch
 			}
 
-			w.Write(by)
+			//nodeResources := make(map[nodeMeta][]topology.Resource)
+			for nm, v := range resourceWatchers {
+				v.StartWatcher()
+				v.ListenWatcher(func(resourceEvent watch.Event) {
+					var rx interface{} = resourceEvent.Object
+					fmt.Println(rx)
+					fmt.Println(nm.Id)
+
+					// figure out type
+					// call format for type
+					var r topology.Resource
+					switch x.(type) {
+					case *deploymentconfigv1.DeploymentConfig:
+						r = formatDeploymentConfig(x)
+					case *appsv1.Deployment:
+						//node = createResource(x, "Deployment")
+					case *corev1.Service:
+						r = formatService(x)
+					case *routev1.Route:
+						r = formatRoute(x)
+					case *corev1.ReplicationController:
+						r = formatReplicationController(x)
+					default:
+						fmt.Println(reflect.TypeOf(x))
+					}
+
+					item := nodeDataNotMarshalled[nm.Id]
+
+					if item.Id == "" {
+						item.Resources = append(item.Resources, r)
+
+						nd, err := json.Marshal(item)
+						if err != nil {
+							k8log.Error(err, "failed to retrieve json encoding of node")
+						}
+						nodeDatas[nm.Id] = string(nd)
+						// for this node, find the corresponding: nd, err := json.Marshal(topology.NodeData{Id: nm.Id, Type: nm.Type, Resources: resources, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: labelKey, DonutStatus: make(map[string]string)}})
+						// the nd's need to be stored in a map for easy look up and then we are going to modify the resource section by adding the resource.
+					} else {
+						var res []topology.Resource
+						res = append(res, r)
+						topResource := topology.NodeData{Id: nm.Id, Type: nm.Type, Resources: res, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: "TODO: TINA FIX", DonutStatus: make(map[string]string)}}
+						nodeDataNotMarshalled[nm.Id] = topResource
+						nd, err := json.Marshal(topResource)
+						if err != nil {
+							k8log.Error(err, "failed to retrieve json encoding of node")
+						}
+						nodeDatas[nm.Id] = string(nd)
+					}
+
+					result = topology.GetSampleTopology(formattedDc, nodeDatas, groups, edges)
+					by, _ := json.Marshal(result)
+					b := bytes.NewBuffer(by)
+
+					w.Header().Set(http.CanonicalHeaderKey("Content-Type"), "application/json")
+					if _, err := b.WriteTo(w); err != nil {
+						fmt.Fprintf(w, "%s", err)
+					}
+
+					w.Write(by)
+				})
+			}
+
+			//--------------------------------------------------------------
+			//--------------------------------------------------------------
+
 		})
 	}
 }
@@ -184,6 +258,25 @@ func (d data) getGroups() []string {
 	return groups
 }
 
+func getResourcesListOptions(dc map[string][]string) map[metav1.ListOptions]nodeMeta {
+	listOptions := make(map[metav1.ListOptions]nodeMeta)
+	for labelKey, dcNodes := range dc {
+		options := metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", labelKey),
+		}
+		for _, dc := range dcNodes {
+			var nm nodeMeta
+			err := json.Unmarshal([]byte(dc), &nm)
+			if err != nil {
+				k8log.Error(err, "failed to list existing replicationControllers")
+			}
+			listOptions[options] = nm
+		}
+
+	}
+	return listOptions
+}
+
 func getResources(dc map[string][]string, cl kubernetes.Interface, clRoute *routeclientset.RouteV1Client, clDepConfig *ocappsclient.AppsV1Client, namespace string) map[string]string {
 	nodeDatas := make(map[string]string)
 	for labelKey, dcNodes := range dc {
@@ -208,7 +301,7 @@ func getResources(dc map[string][]string, cl kubernetes.Interface, clRoute *rout
 			if err != nil {
 				k8log.Error(err, "failed to list existing deployment configs")
 			}
-			resources = append(resources, formatService(services.Items)...)
+			resources = append(resources, formatServices(services.Items)...)
 
 			// Routes
 			routes, err := clRoute.Routes(namespace).List(options)
@@ -251,7 +344,20 @@ func formatDeploymentConfigs(deploymentConfigItems []deploymentconfigv1.Deployme
 	return resources
 }
 
-func formatService(services []corev1.Service) []topology.Resource {
+func formatDeploymentConfig(deploymentConfigItems interface{}) topology.Resource {
+	deploymentConfig := deploymentConfigItems.(*deploymentconfigv1.DeploymentConfig)
+	meta, err := json.Marshal(deploymentConfig.GetObjectMeta())
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of deployment config")
+	}
+	status, err := json.Marshal(deploymentConfig.Status)
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of deployment config")
+	}
+	return topology.Resource{Name: deploymentConfig.Name, Kind: deploymentConfig.Kind, Metadata: string(meta), Status: string(status)}
+}
+
+func formatServices(services []corev1.Service) []topology.Resource {
 	var resources []topology.Resource
 
 	for _, elem := range services {
@@ -266,6 +372,19 @@ func formatService(services []corev1.Service) []topology.Resource {
 		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
 	}
 	return resources
+}
+
+func formatService(services interface{}) topology.Resource {
+	serv := services.(*corev1.Service)
+	meta, err := json.Marshal(serv.GetObjectMeta())
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of service")
+	}
+	status, err := json.Marshal(serv.Status)
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of service")
+	}
+	return topology.Resource{Name: serv.Name, Kind: serv.Kind, Metadata: string(meta), Status: string(status)}
 }
 
 func formatReplicationControllers(replicaSetItems []corev1.ReplicationController) []topology.Resource {
@@ -285,6 +404,19 @@ func formatReplicationControllers(replicaSetItems []corev1.ReplicationController
 	return resources
 }
 
+func formatReplicationController(replicaSetItems interface{}) topology.Resource {
+	rc := replicaSetItems.(*corev1.ReplicationController)
+	meta, err := json.Marshal(rc.GetObjectMeta())
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of replication controller")
+	}
+	status, err := json.Marshal(rc.Status)
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of replication controller")
+	}
+	return topology.Resource{Name: rc.Name, Kind: rc.Kind, Metadata: string(meta), Status: string(status)}
+}
+
 func formatRoutes(routeItems []routev1.Route) []topology.Resource {
 	var resources []topology.Resource
 
@@ -300,6 +432,19 @@ func formatRoutes(routeItems []routev1.Route) []topology.Resource {
 		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
 	}
 	return resources
+}
+
+func formatRoute(routeItems interface{}) topology.Resource {
+	r := routeItems.(*routev1.Route)
+	meta, err := json.Marshal(r.GetObjectMeta())
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of route")
+	}
+	status, err := json.Marshal(r.Status)
+	if err != nil {
+		k8log.Error(err, "failed to retrieve json encoding of route")
+	}
+	return topology.Resource{Name: r.Name, Kind: r.Kind, Metadata: string(meta), Status: string(status)}
 }
 
 func (d data) formatNodes() []string {

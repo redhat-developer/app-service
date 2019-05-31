@@ -2,14 +2,15 @@ package kubeclient
 
 import (
 	ocappsclient "github.com/openshift/client-go/apps/clientset/versioned/typed/apps/v1"
+	ocrouteclient "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 type KubeClient struct {
-	CoreClient   kubernetes.Interface
-	OcAppsClient ocappsclient.AppsV1Interface
-	//OcRouteClient ocrouteclient.RouteV1Interface
+	CoreClient    kubernetes.Interface
+	OcAppsClient  ocappsclient.AppsV1Interface
+	OcRouteClient ocrouteclient.RouteV1Interface
 }
 
 func NewKubeClient() *KubeClient {
@@ -21,6 +22,11 @@ func NewKubeClient() *KubeClient {
 		panic(err)
 	}
 	kc.OcAppsClient, err = ocappsclient.NewForConfig(&config)
+	if err != nil {
+		panic(err)
+	}
+
+	kc.OcRouteClient, err = ocrouteclient.NewForConfig(&config)
 	if err != nil {
 		panic(err)
 	}

@@ -21,6 +21,14 @@ func (kc KubeClient) GetDeploymentConfigWatcher(namespace string, options v1.Lis
 	return w
 }
 
+func (kc KubeClient) GetReplicationControllerWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
+	w, err := kc.CoreClient.CoreV1().ReplicationControllers(namespace).Watch(options)
+	if err != nil {
+		onError(err)
+	}
+	return w
+}
+
 func (kc KubeClient) GetPodWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
 	w, err := kc.CoreClient.CoreV1().Pods(namespace).Watch(options)
 	if err != nil {
@@ -29,13 +37,13 @@ func (kc KubeClient) GetPodWatcher(namespace string, options v1.ListOptions, onE
 	return w
 }
 
-// func (kc KubeClient) GetRouteWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
-// 	w, err := kc.OcRouteClient.Routes(namespace).Watch(options)
-// 	if err != nil {
-// 		onError(err)
-// 	}
-// 	return w
-// }
+func (kc KubeClient) GetRouteWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
+	w, err := kc.OcRouteClient.Routes(namespace).Watch(options)
+	if err != nil {
+		onError(err)
+	}
+	return w
+}
 
 func (kc KubeClient) GetServiceWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
 	w, err := kc.CoreClient.CoreV1().Services(namespace).Watch(options)
