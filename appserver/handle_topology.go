@@ -49,13 +49,10 @@ type data struct {
 func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		/*
-			INFO Access the OpenShift web-console here: https://console-openshift-console.apps.tkurian15.devcluster.openshift.com
-			INFO Login to the console with user: kubeadmin, password: dN77I-KUXKu-aFsqo-Bn4Ns
-		*/
+
 		namespace := "default"
-		host := "https://api.tkurian15.devcluster.openshift.com:6443"
-		bearerToken := "Q3aZZ_ZPEN23zP6Dp47RXj_ITKufzwckOr87scxFhd0"
+		host := "https://api.tkurian16.devcluster.openshift.com:6443"
+		bearerToken := "7DdF7VrdYl2F9MrR95J_v0Z0pJj1qh6tMZrSzbn_Uno"
 
 		openshiftAPIConfig := getOpenshiftAPIConfig(host, bearerToken)
 
@@ -75,6 +72,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 		var d data
 		newWatch.StartWatcher()
 		testMap := make(map[dataTypes][]dataTypes)
+
 		newWatch.ListenWatcher(func(event watch.Event) {
 
 			var x interface{} = event.Object
@@ -91,10 +89,6 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 			testMap[node] = append(testMap[node], dataTypes{})
 			d.nodes = testMap
 
-			fmt.Println("------------------------------------------------------")
-			fmt.Println(d.nodes)
-			fmt.Println("------------------------------------------------------")
-
 			nodes := d.getUniqueNodes()
 			groups := d.getGroups()
 			edges := d.getEdges()
@@ -103,6 +97,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 			clDepConfig, _ := ocappsclient.NewForConfig(&openshiftAPIConfig)
 			clRoute, _ := routeclientset.NewForConfig(&openshiftAPIConfig)
 			resources := getResources(nodes, k.CoreClient, clRoute, clDepConfig, namespace)
+
 			result = topology.GetSampleTopology(formattedDc, resources, groups, edges)
 			by, _ := json.Marshal(result)
 			b := bytes.NewBuffer(by)
@@ -172,11 +167,14 @@ func (d data) getEdges() []string {
 func (d data) getGroups() []string {
 	nodes := make(map[string][]string)
 	var groups []string
+	var gs []string
 
 	nodes = d.getLabelData("app.kubernetes.io/part-of", "", false)
-
 	for key, value := range nodes {
-		g, err := json.Marshal(topology.Group{Id: "group:" + key, Name: key, Nodes: value})
+		for _, v := range value {
+			gs = append(gs, string(v))
+		}
+		g, err := json.Marshal(topology.Group{Id: "group:" + key, Name: key, Nodes: gs})
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
@@ -331,7 +329,6 @@ func (d data) formatNodes() []string {
 func (d data) getLabelData(label string, keyLabel string, meta bool) map[string][]string {
 	nnn := make(map[string][]string)
 	for key, _ := range d.nodes {
-
 		if key.Key == "DeploymentConfig" {
 			dc := key.Value.(*deploymentconfigv1.DeploymentConfig)
 			labelValue := dc.Labels[label]
@@ -417,5 +414,4 @@ func createNode(object interface{}, nodeType string) dataTypes {
 
 	d := object.(*appsv1.Deployment)
 	return dataTypes{Id: base64.StdEncoding.EncodeToString([]byte(d.UID)), Key: "Deployment", Value: object}
-
 }
