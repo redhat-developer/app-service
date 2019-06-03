@@ -175,16 +175,6 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 	}
 }
 
-func getOpenshiftAPIConfig(host string, bearerToken string) rest.Config {
-	return rest.Config{
-		Host:        host,
-		BearerToken: bearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	}
-}
-
 func (d data) getUniqueNodes() map[string][]string {
 	return d.getLabelData("app.kubernetes.io/name", "", true)
 }
