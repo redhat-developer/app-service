@@ -29,6 +29,14 @@ func (kc KubeClient) GetReplicationControllerWatcher(namespace string, options v
 	return w
 }
 
+func (kc KubeClient) GetReplicaSetWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
+	w, err := kc.CoreClient.AppsV1().ReplicaSets(namespace).Watch(options)
+	if err != nil {
+		onError(err)
+	}
+	return w
+}
+
 func (kc KubeClient) GetPodWatcher(namespace string, options v1.ListOptions, onError func(err error)) watch.Interface {
 	w, err := kc.CoreClient.CoreV1().Pods(namespace).Watch(options)
 	if err != nil {
