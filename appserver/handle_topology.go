@@ -24,10 +24,6 @@ import (
 
 var k8log = logf.Log
 
-type myNodes struct {
-	nodes map[string]map[string][]string
-}
-
 type nodeMeta struct {
 	Id   string
 	Name string
@@ -74,7 +70,6 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 		)
 		newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
 
-		var result topology.VisualizationResponse
 		var d data
 		newWatch.StartWatcher()
 		testMap := make(map[dataTypes][]dataTypes)
@@ -164,9 +159,8 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 								}
 								nodeDatas[nm.Id] = string(nd)
 							}
-							result = topology.GetSampleTopology(formattedDc, nodeDatas, groups, edges)
 							mu.Lock()
-							ws.WriteJSON(result)
+							ws.WriteJSON(topology.GetSampleTopology(formattedDc, nodeDatas, groups, edges))
 							mu.Unlock()
 						})
 					}(v, nm)
