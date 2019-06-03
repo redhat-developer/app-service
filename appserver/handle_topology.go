@@ -91,7 +91,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 				testMap[node] = append(testMap[node], dataTypes{})
 				d.nodes = testMap
 
-				nodes := d.getUniqueNodes()
+				nodes := d.getLabelData("app.kubernetes.io/name", "", true)
 				groups := d.getGroups()
 				edges := d.getEdges()
 				formattedDc := d.formatNodes()
@@ -168,10 +168,6 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 		}()
 
 	}
-}
-
-func (d data) getUniqueNodes() map[string][]string {
-	return d.getLabelData("app.kubernetes.io/name", "", true)
 }
 
 func (d data) getEdges() []string {
