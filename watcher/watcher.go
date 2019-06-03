@@ -34,10 +34,12 @@ func (w Watch) StartWatcher() {
 }
 
 func (w Watch) ListenWatcher(onEvent func(obj watch.Event)) {
-	obj := <-w.ResultStream
-	for _, v := range w.WatchFilters {
-		if v == obj.Type {
-			onEvent(obj)
+	for {
+		obj := <-w.ResultStream
+		for _, v := range w.WatchFilters {
+			if v == obj.Type {
+				onEvent(obj)
+			}
 		}
 	}
 }
@@ -49,6 +51,8 @@ func (w Watch) StopWatch() {
 }
 
 func sendToChannel(w watch.Interface, ch chan watch.Event) {
-	v := <-w.ResultChan()
-	ch <- v
+	for {
+		v := <-w.ResultChan()
+		ch <- v
+	}
 }
