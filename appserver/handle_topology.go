@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/rest"
 	"net/http"
 	"reflect"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -168,16 +167,6 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 			})
 		}()
 
-	}
-}
-
-func getOpenshiftAPIConfig(host string, bearerToken string) rest.Config {
-	return rest.Config{
-		Host:        host,
-		BearerToken: bearerToken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
 	}
 }
 
@@ -462,82 +451,4 @@ func createNode(object interface{}, nodeType string) dataTypes {
 
 	d := object.(*appsv1.Deployment)
 	return dataTypes{Id: base64.StdEncoding.EncodeToString([]byte(d.UID)), Key: "Deployment", Value: object}
-}
-
-/*************************************************
- *************************************************
- *                                               *
- *                                               *
- *                   OLD CODE                    *
- *                                               *
- *                                               *
- *************************************************
- *************************************************/
-
-func formatServices(services []corev1.Service) []topology.Resource {
-	var resources []topology.Resource
-
-	for _, elem := range services {
-		meta, err := json.Marshal(elem.GetObjectMeta())
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of service")
-		}
-		status, err := json.Marshal(elem.Status)
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of service")
-		}
-		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
-	}
-	return resources
-}
-
-func formatRoutes(routeItems []routev1.Route) []topology.Resource {
-	var resources []topology.Resource
-
-	for _, elem := range routeItems {
-		meta, err := json.Marshal(elem.GetObjectMeta())
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of route")
-		}
-		status, err := json.Marshal(elem.Status)
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of route")
-		}
-		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
-	}
-	return resources
-}
-
-func formatReplicationControllers(replicaSetItems []corev1.ReplicationController) []topology.Resource {
-	var resources []topology.Resource
-
-	for _, elem := range replicaSetItems {
-		meta, err := json.Marshal(elem.GetObjectMeta())
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of replication controller")
-		}
-		status, err := json.Marshal(elem.Status)
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of replication controller")
-		}
-		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
-	}
-	return resources
-}
-
-func formatDeploymentConfigs(deploymentConfigItems []deploymentconfigv1.DeploymentConfig) []topology.Resource {
-	var resources []topology.Resource
-
-	for _, elem := range deploymentConfigItems {
-		meta, err := json.Marshal(elem.GetObjectMeta())
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of deployment config")
-		}
-		status, err := json.Marshal(elem.Status)
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of deployment config")
-		}
-		resources = append(resources, topology.Resource{Name: elem.Name, Kind: elem.Kind, Metadata: string(meta), Status: string(status)})
-	}
-	return resources
 }
