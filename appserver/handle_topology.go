@@ -69,13 +69,11 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 		)
 		newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
 
+		var result topology.VisualizationResponse
 		var d data
 		newWatch.StartWatcher()
 		testMap := make(map[dataTypes][]dataTypes)
-		resourceWatchers := make(map[nodeMeta]*watcher.Watch)
-		var groups []string
-		var edges []string
-		var formattedDc []string
+
 		newWatch.ListenWatcher(func(event watch.Event) {
 			fmt.Println("HERE NODES WATCHER")
 			var x interface{} = event.Object
@@ -93,15 +91,17 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 			d.nodes = testMap
 
 			nodes := d.getUniqueNodes()
-			groups = d.getGroups()
-			edges = d.getEdges()
-			formattedDc = d.formatNodes()
+			groups := d.getGroups()
+			edges := d.getEdges()
+			formattedDc := d.formatNodes()
 
 			clDepConfig, _ := ocappsclient.NewForConfig(&openshiftAPIConfig)
 			clRoute, _ := routeclientset.NewForConfig(&openshiftAPIConfig)
 			getResources(nodes, k.CoreClient, clRoute, clDepConfig, namespace)
 			resourceOptsList := getResourcesListOptions(nodes)
-
+			resourceWatchers := make(map[nodeMeta]*watcher.Watch)
+			nodeDatas := make(map[string]string)
+			nodeDataNotMarshalled := make(map[string]topology.NodeData)
 			for opts, v := range resourceOptsList {
 				var newResourceWatch *watcher.Watch
 
@@ -125,70 +125,67 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 				newResourceWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
 				resourceWatchers[v] = newResourceWatch
 				fmt.Println("TEST")
-				newWatch.StopWatch()
+			}
+
+			for nm, v := range resourceWatchers {
+				fmt.Println("HERE RESOURCE WATCHER LOOP")
+				v.StartWatcher()
+				v.ListenWatcher(func(resourceEvent watch.Event) {
+					var rx interface{} = resourceEvent.Object
+					var r topology.Resource
+					switch rx.(type) {
+					case *deploymentconfigv1.DeploymentConfig:
+						r = formatDeploymentConfig(rx)
+					case *appsv1.Deployment:
+						r = formatDeployment(rx)
+					case *corev1.Service:
+						r = formatService(rx)
+					case *routev1.Route:
+						r = formatRoute(rx)
+					case *corev1.ReplicationController:
+						r = formatReplicationController(rx)
+					case *appsv1.ReplicaSet:
+						r = formatReplicaSet(rx)
+					default:
+						fmt.Println(reflect.TypeOf(rx))
+					}
+
+					item := nodeDataNotMarshalled[nm.Id]
+
+					if item.Id == "" {
+						item.Resources = append(item.Resources, r)
+
+						nd, err := json.Marshal(item)
+						if err != nil {
+							k8log.Error(err, "failed to retrieve json encoding of node")
+						}
+						nodeDatas[nm.Id] = string(nd)
+					} else {
+						var res []topology.Resource
+						res = append(res, r)
+						topResource := topology.NodeData{Id: nm.Id, Type: nm.Type, Resources: res, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: "TODO: TINA FIX", DonutStatus: make(map[string]string)}}
+						nodeDataNotMarshalled[nm.Id] = topResource
+						nd, err := json.Marshal(topResource)
+						if err != nil {
+							k8log.Error(err, "failed to retrieve json encoding of node")
+						}
+						nodeDatas[nm.Id] = string(nd)
+					}
+
+					result = topology.GetSampleTopology(formattedDc, nodeDatas, groups, edges)
+					by, _ := json.Marshal(result)
+					b := bytes.NewBuffer(by)
+
+					w.Header().Set(http.CanonicalHeaderKey("Content-Type"), "application/json")
+					if _, err := b.WriteTo(w); err != nil {
+						fmt.Fprintf(w, "%s", err)
+					}
+
+					w.Write(by)
+				})
+				v.StopWatch()
 			}
 		})
-
-		nodeDataNotMarshalled := make(map[string]topology.NodeData)
-		nodeDatas := make(map[string]string)
-		var result topology.VisualizationResponse
-		for nm, v := range resourceWatchers {
-			fmt.Println("HERE RESOURCE WATCHER LOOP")
-			v.StartWatcher()
-			v.ListenWatcher(func(resourceEvent watch.Event) {
-				var rx interface{} = resourceEvent.Object
-				var r topology.Resource
-				switch rx.(type) {
-				case *deploymentconfigv1.DeploymentConfig:
-					r = formatDeploymentConfig(rx)
-				case *appsv1.Deployment:
-					r = formatDeployment(rx)
-				case *corev1.Service:
-					r = formatService(rx)
-				case *routev1.Route:
-					r = formatRoute(rx)
-				case *corev1.ReplicationController:
-					r = formatReplicationController(rx)
-				case *appsv1.ReplicaSet:
-					r = formatReplicaSet(rx)
-				default:
-					fmt.Println(reflect.TypeOf(rx))
-				}
-
-				item := nodeDataNotMarshalled[nm.Id]
-
-				if item.Id == "" {
-					item.Resources = append(item.Resources, r)
-
-					nd, err := json.Marshal(item)
-					if err != nil {
-						k8log.Error(err, "failed to retrieve json encoding of node")
-					}
-					nodeDatas[nm.Id] = string(nd)
-				} else {
-					var res []topology.Resource
-					res = append(res, r)
-					topResource := topology.NodeData{Id: nm.Id, Type: nm.Type, Resources: res, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: "TODO: TINA FIX", DonutStatus: make(map[string]string)}}
-					nodeDataNotMarshalled[nm.Id] = topResource
-					nd, err := json.Marshal(topResource)
-					if err != nil {
-						k8log.Error(err, "failed to retrieve json encoding of node")
-					}
-					nodeDatas[nm.Id] = string(nd)
-				}
-
-				result = topology.GetSampleTopology(formattedDc, nodeDatas, groups, edges)
-				by, _ := json.Marshal(result)
-				b := bytes.NewBuffer(by)
-
-				w.Header().Set(http.CanonicalHeaderKey("Content-Type"), "application/json")
-				if _, err := b.WriteTo(w); err != nil {
-					fmt.Fprintf(w, "%s", err)
-				}
-
-				w.Write(by)
-			})
-		}
 	}
 }
 
