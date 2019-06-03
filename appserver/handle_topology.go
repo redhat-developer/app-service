@@ -50,9 +50,10 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		//TODO: remove host and bearerToken from here once old code is not needed
 		namespace := "default"
-		host := "https://api.tkurian16.devcluster.openshift.com:6443"
-		bearerToken := "7DdF7VrdYl2F9MrR95J_v0Z0pJj1qh6tMZrSzbn_Uno"
+		host := "https://api.tkurian18.devcluster.openshift.com:6443"
+		bearerToken := "oC3kcmoCJ4DrAJMwvBs7-HAJjLQedGB4kz2NEH_yBOs"
 
 		openshiftAPIConfig := getOpenshiftAPIConfig(host, bearerToken)
 
