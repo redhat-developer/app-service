@@ -243,7 +243,7 @@ func getResourcesListOptions(dc map[string][]nodeMeta) map[metav1.ListOptions]no
 	return listOptions
 }
 
-// Create topology node
+// Create topology node.
 func (d data) getNode() []string {
 	var nodes []string
 	for _, node := range d.nodes {
@@ -257,7 +257,7 @@ func (d data) getNode() []string {
 	return nodes
 }
 
-// Get node label data
+// Get node label data.
 func (d data) getLabelData(label string, keyLabel string) map[string][]nodeMeta {
 	metadata := make(map[string][]nodeMeta)
 	for _, node := range d.nodes {
@@ -272,7 +272,7 @@ func (d data) getLabelData(label string, keyLabel string) map[string][]nodeMeta 
 	return metadata
 }
 
-// Get node annotation data
+// Get node annotation data.
 func (d data) getAnnotationData(annotation string) map[string][]string {
 	nodes := make(map[string][]string)
 	for _, node := range d.nodes {
@@ -289,7 +289,7 @@ func (d data) getAnnotationData(annotation string) map[string][]string {
 	return nodes
 }
 
-// Gets node metadata
+// Gets node metadata.
 func getNodeMetadata(event watch.Event) nodeMeta {
 	var x interface{} = event.Object
 	var node nodeMeta
