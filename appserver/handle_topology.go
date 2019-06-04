@@ -316,7 +316,7 @@ func (d data) formatNodes() []string {
 }
 
 func (d data) getLabelData(label string, keyLabel string, meta bool) map[string][]nodeMeta {
-	nnn := make(map[string][]nodeMeta)
+	metadata := make(map[string][]nodeMeta)
 	for key, _ := range d.nodes {
 		if key.Key == "DeploymentConfig" {
 			dc := key.Value.(*deploymentconfigv1.DeploymentConfig)
@@ -332,9 +332,9 @@ func (d data) getLabelData(label string, keyLabel string, meta bool) map[string]
 				}
 			}
 			if keyLabel == "" {
-				nnn[labelValue] = append(nnn[labelValue], jsn)
+				metadata[labelValue] = append(metadata[labelValue], jsn)
 			} else if keyLabel == labelValue {
-				nnn[labelValue] = append(nnn[labelValue], jsn)
+				metadata[labelValue] = append(metadata[labelValue], jsn)
 			}
 		} else if key.Key == "Deployment" {
 			d := key.Value.(*appsv1.Deployment)
@@ -346,14 +346,14 @@ func (d data) getLabelData(label string, keyLabel string, meta bool) map[string]
 				jsn = nodeMeta{Id: base64.StdEncoding.EncodeToString([]byte(d.UID))}
 			}
 			if keyLabel == "" {
-				nnn[labelValue] = append(nnn[labelValue], jsn)
+				metadata[labelValue] = append(metadata[labelValue], jsn)
 			} else if keyLabel == labelValue {
-				nnn[labelValue] = append(nnn[labelValue], jsn)
+				metadata[labelValue] = append(metadata[labelValue], jsn)
 			}
 		}
 	}
 
-	return nnn
+	return metadata
 }
 
 func (d data) getAnnotationData(annotation string) map[string][]string {
