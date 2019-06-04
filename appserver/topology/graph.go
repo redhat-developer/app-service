@@ -2,7 +2,6 @@ package topology
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type Graph struct {
@@ -67,7 +66,9 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 	for _, elem := range nodes {
 		dataNode := &Node{}
 		err := json.Unmarshal([]byte(elem), dataNode)
-		fmt.Println(err)
+		if err != nil {
+			panic(err)
+		}
 		allNodes = append(allNodes, *dataNode)
 	}
 
@@ -75,7 +76,9 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 	for k, elem := range resources {
 		dataResource := &NodeData{}
 		err := json.Unmarshal([]byte(elem), dataResource)
-		fmt.Println(err)
+		if err != nil {
+			panic(err)
+		}
 		var key NodeID
 		key = NodeID(k)
 		m[key] = *dataResource
@@ -85,7 +88,9 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 	for _, elem := range groups {
 		dataNode := &Group{}
 		err := json.Unmarshal([]byte(elem), dataNode)
-		fmt.Println(err)
+		if err != nil {
+			panic(err)
+		}
 		allGroups = append(allGroups, *dataNode)
 	}
 
@@ -93,7 +98,9 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 	for _, elem := range edges {
 		dataNode := &Edge{}
 		err := json.Unmarshal([]byte(elem), dataNode)
-		fmt.Println(err)
+		if err != nil {
+			panic(err)
+		}
 		allEdges = append(allEdges, *dataNode)
 	}
 

@@ -24,9 +24,10 @@ import (
 var k8log = logf.Log
 
 type nodeMeta struct {
-	Id   string
-	Name string
-	Type string
+	Id    string
+	Name  string
+	Type  string
+	Value interface{}
 }
 
 type dataTypes struct {
@@ -48,131 +49,104 @@ var upgrader = websocket.Upgrader{
 func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		ws, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		//TODO: remove host and bearerToken from here once old code is not needed
 		namespace := "default"
+		ws := convertHTTPToWebSocket(w, r)
 
 		k := kubeclient.NewKubeClient()
-		listOptions := metav1.ListOptions{}
-		onGetWatchError := func(err error) {
-			fmt.Errorf("Error is %+v", err)
-		}
-		newWatch := watcher.NewWatch(namespace,
-			k,
-			k.GetDeploymentConfigWatcher(namespace, listOptions, onGetWatchError),
-			k.GetDeploymentWatcher(namespace, listOptions, onGetWatchError),
-		)
-		newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
+		newWatch := createNodeWatcher(namespace, k)
 
-		var d data
-		newWatch.StartWatcher()
-		testMap := make(map[dataTypes][]dataTypes)
+		nodesMap := make(map[dataTypes][]dataTypes)
 		nodeDatas := make(map[string]string)
-		nodeDataNotMarshalled := make(map[string]topology.NodeData)
+		rawNodeData := make(map[string]topology.NodeData)
 		mu := &sync.Mutex{}
+		var d data
 		go func() {
 			newWatch.ListenWatcher(func(event watch.Event) {
-				var x interface{} = event.Object
-				var node dataTypes
-				switch x.(type) {
-				case *deploymentconfigv1.DeploymentConfig:
-					node = createNode(x, "DeploymentConfig")
-				case *appsv1.Deployment:
-					node = createNode(x, "Deployment")
-				default:
-					fmt.Println(reflect.TypeOf(x))
-				}
+				node := getNode(event)
+				nodesMap[node] = append(nodesMap[node], dataTypes{})
+				d.nodes = nodesMap
 
-				testMap[node] = append(testMap[node], dataTypes{})
-				d.nodes = testMap
-
-				nodes := d.getLabelData("app.kubernetes.io/name", "", true)
-				groups := d.getGroups()
-				edges := d.getEdges()
-				formattedDc := d.formatNodes()
-
-				resourceOptsList := getResourcesListOptions(nodes)
+				resourceOptsList := getResourcesListOptions(d.getLabelData("app.kubernetes.io/name", "", true))
 				resourceWatchers := make(map[nodeMeta]*watcher.Watch)
-
-				items := make(map[string]nodeMeta)
 				for opts, v := range resourceOptsList {
-					items[v.Id] = v
-					resourceWatchers[v] = watcher.NewWatch(namespace,
-						k,
-						k.GetDeploymentConfigWatcher(namespace, opts, onGetWatchError),
-						k.GetDeploymentWatcher(namespace, opts, onGetWatchError),
-						k.GetReplicationControllerWatcher(namespace, opts, onGetWatchError),
-						k.GetReplicaSetWatcher(namespace, opts, onGetWatchError),
-						k.GetServiceWatcher(namespace, opts, onGetWatchError),
-						k.GetRouteWatcher(namespace, opts, onGetWatchError),
-					)
+					resourceWatchers[v] = createResourceWatcher(namespace, opts, k)
 				}
-				for nm, v := range resourceWatchers {
-					v.SetFilters([]watch.EventType{watch.Added, watch.Modified})
-					v.StartWatcher()
-					go func(v *watcher.Watch, nm nodeMeta) {
-						v.ListenWatcher(func(resourceEvent watch.Event) {
-							var rx interface{} = resourceEvent.Object
-							var r topology.Resource
-							switch rx.(type) {
-							case *deploymentconfigv1.DeploymentConfig:
-								r = formatDeploymentConfig(rx)
-							case *appsv1.Deployment:
-								r = formatDeployment(rx)
-							case *corev1.Service:
-								r = formatService(rx)
-							case *routev1.Route:
-								r = formatRoute(rx)
-							case *corev1.ReplicationController:
-								r = formatReplicationController(rx)
-							case *appsv1.ReplicaSet:
-								r = formatReplicaSet(rx)
-							default:
-								fmt.Println(reflect.TypeOf(rx))
-							}
 
-							item := nodeDataNotMarshalled[nm.Id]
-
+				for metadata, watchh := range resourceWatchers {
+					go func(metadata nodeMeta, watchh *watcher.Watch) {
+						watchh.ListenWatcher(func(resourceEvent watch.Event) {
+							r := getResource(resourceEvent.Object)
+							item := rawNodeData[metadata.Id]
 							if item.Id == "" {
 								var res []topology.Resource
-								res = append(res, r)
-								topResource := topology.NodeData{Id: nm.Id, Type: nm.Type, Resources: res, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: "TODO: TINA FIX", DonutStatus: make(map[string]string)}}
-								nodeDataNotMarshalled[nm.Id] = topResource
-
-								nd, err := json.Marshal(topResource)
-								if err != nil {
-									k8log.Error(err, "failed to retrieve json encoding of node")
-								}
-								nodeDatas[nm.Id] = string(nd)
-							} else {
-								item.Resources = append(item.Resources, r)
-
-								nd, err := json.Marshal(item)
-								if err != nil {
-									k8log.Error(err, "failed to retrieve json encoding of node")
-								}
-								nodeDatas[nm.Id] = string(nd)
+								res = append(res, getResource(metadata.Value))
+								rawNodeData[metadata.Id] = topology.NodeData{Resources: res, Id: metadata.Id, Type: metadata.Type, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: metadata.Name, DonutStatus: make(map[string]string)}}
+								item = rawNodeData[metadata.Id]
 							}
+							item.Resources = addOrUpdate(item.Resources, r)
+							rawNodeData[metadata.Id] = item
+							nd, err := json.Marshal(item)
+							if err != nil {
+								k8log.Error(err, "failed to retrieve json encoding of node")
+							}
+							nodeDatas[item.Id] = string(nd)
+
 							mu.Lock()
-							ws.WriteJSON(topology.GetSampleTopology(formattedDc, nodeDatas, groups, edges))
+							ws.WriteJSON(topology.GetSampleTopology(d.formatNodes(), nodeDatas, d.getGroups(), d.getEdges()))
 							mu.Unlock()
 						})
-					}(v, nm)
+					}(metadata, watchh)
 				}
 			})
 		}()
-
 	}
+}
+
+func convertHTTPToWebSocket(w http.ResponseWriter, r *http.Request) *websocket.Conn {
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return ws
+}
+func createNodeWatcher(namespace string, k *kubeclient.KubeClient) *watcher.Watch {
+	listOptions := metav1.ListOptions{}
+	onGetWatchError := func(err error) {
+		fmt.Errorf("Error is %+v", err)
+	}
+	newWatch := watcher.NewWatch(namespace,
+		k,
+		k.GetDeploymentConfigWatcher(namespace, listOptions, onGetWatchError),
+		k.GetDeploymentWatcher(namespace, listOptions, onGetWatchError),
+	)
+	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
+	newWatch.StartWatcher()
+	return newWatch
+}
+
+func createResourceWatcher(namespace string, opts metav1.ListOptions, k *kubeclient.KubeClient) *watcher.Watch {
+	onGetWatchError := func(err error) {
+		fmt.Errorf("Error is %+v", err)
+	}
+	newWatch := watcher.NewWatch(namespace,
+		k,
+		k.GetDeploymentConfigWatcher(namespace, opts, onGetWatchError),
+		k.GetDeploymentWatcher(namespace, opts, onGetWatchError),
+		k.GetReplicationControllerWatcher(namespace, opts, onGetWatchError),
+		k.GetReplicaSetWatcher(namespace, opts, onGetWatchError),
+		k.GetServiceWatcher(namespace, opts, onGetWatchError),
+		k.GetRouteWatcher(namespace, opts, onGetWatchError),
+	)
+	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
+	newWatch.StartWatcher()
+	return newWatch
 }
 
 func (d data) getEdges() []string {
 	var edges []string
-	sourceObjects := make(map[string][]string)
+	sourceObjects := make(map[string][]nodeMeta)
 	targetObjects := make(map[string][]string)
 
 	// Arrange keys and target objects.
@@ -190,13 +164,7 @@ func (d data) getEdges() []string {
 
 		for _, target := range targets {
 			for _, source := range sourceObjects {
-				var nm nodeMeta
-				err := json.Unmarshal([]byte(source), &nm)
-				if err != nil {
-					k8log.Error(err, "failed to get node data")
-				}
-
-				e, err := json.Marshal(topology.Edge{Source: nm.Id, Target: target})
+				e, err := json.Marshal(topology.Edge{Source: source.Id, Target: target})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -209,14 +177,14 @@ func (d data) getEdges() []string {
 }
 
 func (d data) getGroups() []string {
-	nodes := make(map[string][]string)
+	nodes := make(map[string][]nodeMeta)
 	var groups []string
 	var gs []string
 
 	nodes = d.getLabelData("app.kubernetes.io/part-of", "", false)
 	for key, value := range nodes {
 		for _, v := range value {
-			gs = append(gs, string(v))
+			gs = append(gs, v.Id)
 		}
 		g, err := json.Marshal(topology.Group{Id: "group:" + key, Name: key, Nodes: gs})
 		if err != nil {
@@ -228,7 +196,7 @@ func (d data) getGroups() []string {
 	return groups
 }
 
-func getResourcesListOptions(dc map[string][]string) map[metav1.ListOptions]nodeMeta {
+func getResourcesListOptions(dc map[string][]nodeMeta) map[metav1.ListOptions]nodeMeta {
 	listOptions := make(map[metav1.ListOptions]nodeMeta)
 	for labelKey, dcNodes := range dc {
 		if labelKey != "" {
@@ -236,12 +204,7 @@ func getResourcesListOptions(dc map[string][]string) map[metav1.ListOptions]node
 				LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", labelKey),
 			}
 			for _, dc := range dcNodes {
-				var nm nodeMeta
-				err := json.Unmarshal([]byte(dc), &nm)
-				if err != nil {
-					k8log.Error(err, "failed to list existing replicationControllers")
-				}
-				listOptions[options] = nm
+				listOptions[options] = dc
 			}
 		}
 
@@ -259,7 +222,7 @@ func formatDeploymentConfig(deploymentConfigItems interface{}) topology.Resource
 	if err != nil {
 		k8log.Error(err, "failed to retrieve json encoding of deployment config")
 	}
-	return topology.Resource{Name: deploymentConfig.Name, Kind: deploymentConfig.Kind, Metadata: string(meta), Status: string(status)}
+	return topology.Resource{Name: deploymentConfig.Name, Kind: "DeploymentConfig", Metadata: string(meta), Status: string(status)}
 }
 
 func formatDeployment(deploymentItems interface{}) topology.Resource {
@@ -272,7 +235,7 @@ func formatDeployment(deploymentItems interface{}) topology.Resource {
 	if err != nil {
 		k8log.Error(err, "failed to retrieve json encoding of deployment")
 	}
-	return topology.Resource{Name: deployment.Name, Kind: deployment.Kind, Metadata: string(meta), Status: string(status)}
+	return topology.Resource{Name: deployment.Name, Kind: "Deployment", Metadata: string(meta), Status: string(status)}
 }
 
 func formatService(services interface{}) topology.Resource {
@@ -285,7 +248,7 @@ func formatService(services interface{}) topology.Resource {
 	if err != nil {
 		k8log.Error(err, "failed to retrieve json encoding of service")
 	}
-	return topology.Resource{Name: serv.Name, Kind: serv.Kind, Metadata: string(meta), Status: string(status)}
+	return topology.Resource{Name: serv.Name, Kind: "Service", Metadata: string(meta), Status: string(status)}
 }
 
 func formatReplicationController(replicationControllerItems interface{}) topology.Resource {
@@ -298,7 +261,7 @@ func formatReplicationController(replicationControllerItems interface{}) topolog
 	if err != nil {
 		k8log.Error(err, "failed to retrieve json encoding of replication controller")
 	}
-	return topology.Resource{Name: rc.Name, Kind: rc.Kind, Metadata: string(meta), Status: string(status)}
+	return topology.Resource{Name: rc.Name, Kind: "ReplicationController", Metadata: string(meta), Status: string(status)}
 }
 
 func formatReplicaSet(replicaSetItems interface{}) topology.Resource {
@@ -311,7 +274,7 @@ func formatReplicaSet(replicaSetItems interface{}) topology.Resource {
 	if err != nil {
 		k8log.Error(err, "failed to retrieve json encoding of replica set")
 	}
-	return topology.Resource{Name: rs.Name, Kind: rs.Kind, Metadata: string(meta), Status: string(status)}
+	return topology.Resource{Name: rs.Name, Kind: "ReplicaSet", Metadata: string(meta), Status: string(status)}
 }
 
 func formatRoute(routeItems interface{}) topology.Resource {
@@ -324,7 +287,7 @@ func formatRoute(routeItems interface{}) topology.Resource {
 	if err != nil {
 		k8log.Error(err, "failed to retrieve json encoding of route")
 	}
-	return topology.Resource{Name: r.Name, Kind: r.Kind, Metadata: string(meta), Status: string(status)}
+	return topology.Resource{Name: r.Name, Kind: "Route", Metadata: string(meta), Status: string(status)}
 }
 
 func (d data) formatNodes() []string {
@@ -351,50 +314,40 @@ func (d data) formatNodes() []string {
 	return nodes
 }
 
-func (d data) getLabelData(label string, keyLabel string, meta bool) map[string][]string {
-	nnn := make(map[string][]string)
+func (d data) getLabelData(label string, keyLabel string, meta bool) map[string][]nodeMeta {
+	nnn := make(map[string][]nodeMeta)
 	for key, _ := range d.nodes {
 		if key.Key == "DeploymentConfig" {
 			dc := key.Value.(*deploymentconfigv1.DeploymentConfig)
 			labelValue := dc.Labels[label]
-			var jsn []byte
+			var jsn nodeMeta
 			var err error
 			if meta {
-				jsn, err = json.Marshal(nodeMeta{Name: dc.Name, Type: "workload", Id: base64.StdEncoding.EncodeToString([]byte(dc.UID))})
-				if err != nil {
-					k8log.Error(err, "failed to retrieve json encoding of node")
-				}
+				jsn = nodeMeta{Name: dc.Name, Type: "workload", Id: base64.StdEncoding.EncodeToString([]byte(dc.UID)), Value: dc}
 			} else {
-				jsn, err = json.Marshal(dc.UID)
+				jsn = nodeMeta{Id: base64.StdEncoding.EncodeToString([]byte(dc.UID))}
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
 			}
 			if keyLabel == "" {
-				nnn[labelValue] = append(nnn[labelValue], string(jsn))
+				nnn[labelValue] = append(nnn[labelValue], jsn)
 			} else if keyLabel == labelValue {
-				nnn[labelValue] = append(nnn[labelValue], string(jsn))
+				nnn[labelValue] = append(nnn[labelValue], jsn)
 			}
 		} else if key.Key == "Deployment" {
 			d := key.Value.(*appsv1.Deployment)
 			labelValue := d.Labels[label]
-			var jsn []byte
-			var err error
+			var jsn nodeMeta
 			if meta {
-				jsn, err = json.Marshal(nodeMeta{Name: d.Name, Type: "workload", Id: base64.StdEncoding.EncodeToString([]byte(d.UID))})
-				if err != nil {
-					k8log.Error(err, "failed to retrieve json encoding of node")
-				}
+				jsn = nodeMeta{Name: d.Name, Type: "workload", Id: base64.StdEncoding.EncodeToString([]byte(d.UID)), Value: d}
 			} else {
-				jsn, err = json.Marshal(d.UID)
-				if err != nil {
-					k8log.Error(err, "failed to retrieve json encoding of node")
-				}
+				jsn = nodeMeta{Id: base64.StdEncoding.EncodeToString([]byte(d.UID))}
 			}
 			if keyLabel == "" {
-				nnn[labelValue] = append(nnn[labelValue], string(jsn))
+				nnn[labelValue] = append(nnn[labelValue], jsn)
 			} else if keyLabel == labelValue {
-				nnn[labelValue] = append(nnn[labelValue], string(jsn))
+				nnn[labelValue] = append(nnn[labelValue], jsn)
 			}
 		}
 	}
@@ -439,7 +392,7 @@ func (d data) getAnnotationData(annotation string) map[string][]string {
 	return nodes
 }
 
-func createNode(object interface{}, nodeType string) dataTypes {
+func formatNode(object interface{}, nodeType string) dataTypes {
 	if nodeType == "DeploymentConfig" {
 		dc := object.(*deploymentconfigv1.DeploymentConfig)
 		return dataTypes{Id: base64.StdEncoding.EncodeToString([]byte(dc.UID)), Key: "DeploymentConfig", Value: object}
@@ -447,4 +400,51 @@ func createNode(object interface{}, nodeType string) dataTypes {
 
 	d := object.(*appsv1.Deployment)
 	return dataTypes{Id: base64.StdEncoding.EncodeToString([]byte(d.UID)), Key: "Deployment", Value: object}
+}
+
+func getNode(event watch.Event) dataTypes {
+	var x interface{} = event.Object
+	var node dataTypes
+	switch x.(type) {
+	case *deploymentconfigv1.DeploymentConfig:
+		node = formatNode(x, "DeploymentConfig")
+	case *appsv1.Deployment:
+		node = formatNode(x, "Deployment")
+	default:
+		fmt.Println(reflect.TypeOf(x))
+	}
+
+	return node
+}
+
+func getResource(rx interface{}) topology.Resource {
+	var r topology.Resource
+	switch rx.(type) {
+	case *deploymentconfigv1.DeploymentConfig:
+		r = formatDeploymentConfig(rx)
+	case *appsv1.Deployment:
+		r = formatDeployment(rx)
+	case *corev1.Service:
+		r = formatService(rx)
+	case *routev1.Route:
+		r = formatRoute(rx)
+	case *corev1.ReplicationController:
+		r = formatReplicationController(rx)
+	case *appsv1.ReplicaSet:
+		r = formatReplicaSet(rx)
+	default:
+		fmt.Println(reflect.TypeOf(rx))
+	}
+
+	return r
+}
+
+func addOrUpdate(slice []topology.Resource, i topology.Resource) []topology.Resource {
+	for index, ele := range slice {
+		if ele == i {
+			slice[index] = i
+			return slice
+		}
+	}
+	return append(slice, i)
 }
