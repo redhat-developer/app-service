@@ -140,6 +140,7 @@ func createNodeWatcher(namespace string, k *kubeclient.KubeClient) *watcher.Watc
 	)
 	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
 	newWatch.StartWatcher()
+
 	return newWatch
 }
 
@@ -159,6 +160,7 @@ func createResourceWatcher(namespace string, opts metav1.ListOptions, k *kubecli
 	)
 	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
 	newWatch.StartWatcher()
+
 	return newWatch
 }
 
@@ -236,8 +238,8 @@ func getResourcesListOptions(dc map[string][]nodeMeta) map[metav1.ListOptions]no
 				listOptions[options] = dc
 			}
 		}
-
 	}
+
 	return listOptions
 }
 
@@ -390,5 +392,6 @@ func addOrUpdate(slice []topology.Resource, i topology.Resource) []topology.Reso
 			return slice
 		}
 	}
+
 	return append(slice, i)
 }
