@@ -47,73 +47,75 @@ var upgrader = websocket.Upgrader{
 func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		// Get the namespace and convert the connection to a web stocket.
 		namespace := "default"
 		ws := convertHTTPToWebSocket(w, r)
-
-		// Create a client.
-		k := kubeclient.NewKubeClient()
-
-		// Create a node watcher.
-		newWatch := createNodeWatcher(namespace, k)
-
-		// Create mutex for writing data.
-		mutex := &sync.Mutex{}
-
-		// Cache topology node data.
-		var nodesMap []nodeMeta
-		nodeData := make(map[string]string)
-		rawNodeData := make(map[string]topology.NodeData)
-		var d data
-		go func() {
-			newWatch.ListenWatcher(func(event watch.Event) {
-				node := getNodeMetadata(event)
-				nodesMap = append(nodesMap, node)
-				d.nodes = nodesMap
-
-				// Get all list options for each unique node name.
-				resourceOptsList := getResourcesListOptions(d.getLabelData("app.kubernetes.io/name", ""))
-
-				// Create and start all watchers for list options
-				resourceWatchers := make(map[*watcher.Watch]nodeMeta)
-				for opts, v := range resourceOptsList {
-					resourceWatchers[createResourceWatcher(namespace, opts, k)] = v
-				}
-
-				// Listen to each watcher.
-				for w, metadata := range resourceWatchers {
-					go func(metadata nodeMeta, w *watcher.Watch) {
-						w.ListenWatcher(func(resourceEvent watch.Event) {
-							r := getResource(resourceEvent.Object)
-							item := rawNodeData[metadata.Id]
-							if item.Id == "" {
-								var res []topology.Resource
-								res = append(res, getResource(metadata.Value))
-								rawNodeData[metadata.Id] = topology.NodeData{Resources: res, Id: metadata.Id, Type: metadata.Type, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: metadata.Name, DonutStatus: make(map[string]string)}}
-								item = rawNodeData[metadata.Id]
-							}
-
-							// If the resource does not exist yet, add it. Otherwise,
-							// update the old resource with the new one.
-							item.Resources = addOrUpdate(item.Resources, r)
-							rawNodeData[metadata.Id] = item
-							nd, err := json.Marshal(item)
-							if err != nil {
-								k8log.Error(err, "failed to retrieve json encoding of node")
-							}
-							nodeData[item.Id] = string(nd)
-
-							// Write the topology.
-							mutex.Lock()
-							ws.WriteJSON(topology.GetSampleTopology(d.getNode(), nodeData, d.getGroups(), d.getEdges()))
-							mutex.Unlock()
-						})
-					}(metadata, w)
-				}
-			})
-		}()
+		createTopology(ws, namespace)
 	}
+}
+
+func createTopology(ws *websocket.Conn, namespace string) {
+	// Create a client.
+	k := kubeclient.NewKubeClient()
+
+	// Create a node watcher.
+	newWatch := createNodeWatcher(namespace, k)
+
+	// Create mutex for writing data.
+	mutex := &sync.Mutex{}
+
+	// Cache topology node data.
+	var nodesMap []nodeMeta
+	nodeData := make(map[string]string)
+	rawNodeData := make(map[string]topology.NodeData)
+	var d data
+	go func() {
+		newWatch.ListenWatcher(func(event watch.Event) {
+			node := getNodeMetadata(event)
+			nodesMap = append(nodesMap, node)
+			d.nodes = nodesMap
+
+			// Get all list options for each unique node name.
+			resourceOptsList := getResourcesListOptions(d.getLabelData("app.kubernetes.io/name", ""))
+
+			// Create and start all watchers for list options
+			resourceWatchers := make(map[*watcher.Watch]nodeMeta)
+			for opts, v := range resourceOptsList {
+				resourceWatchers[createResourceWatcher(namespace, opts, k)] = v
+			}
+
+			// Listen to each watcher.
+			for w, metadata := range resourceWatchers {
+				go func(metadata nodeMeta, w *watcher.Watch) {
+					w.ListenWatcher(func(resourceEvent watch.Event) {
+						r := getResource(resourceEvent.Object)
+						item := rawNodeData[metadata.Id]
+						if item.Id == "" {
+							var res []topology.Resource
+							res = append(res, getResource(metadata.Value))
+							rawNodeData[metadata.Id] = topology.NodeData{Resources: res, Id: metadata.Id, Type: metadata.Type, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: metadata.Name, DonutStatus: make(map[string]string)}}
+							item = rawNodeData[metadata.Id]
+						}
+
+						// If the resource does not exist yet, add it. Otherwise,
+						// update the old resource with the new one.
+						item.Resources = addOrUpdate(item.Resources, r)
+						rawNodeData[metadata.Id] = item
+						nd, err := json.Marshal(item)
+						if err != nil {
+							k8log.Error(err, "failed to retrieve json encoding of node")
+						}
+						nodeData[item.Id] = string(nd)
+
+						// Write the topology.
+						mutex.Lock()
+						ws.WriteJSON(topology.GetSampleTopology(d.getNode(), nodeData, d.getGroups(), d.getEdges()))
+						mutex.Unlock()
+					})
+				}(metadata, w)
+			}
+		})
+	}()
 }
 
 // Converts the HTTP connection to a websocket in order to stream data.
