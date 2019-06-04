@@ -43,7 +43,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// HandleTopology returns the handler function for the /status endpoint
+// HandleTopology returns the handler function for the /status endpoint.
 func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +54,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 	}
 }
 
+// Create and stream topology.
 func createTopology(ws *websocket.Conn, namespace string) {
 	// Create a client.
 	k := kubeclient.NewKubeClient()
