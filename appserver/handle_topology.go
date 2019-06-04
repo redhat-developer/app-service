@@ -78,7 +78,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 			// Get all list options for each unique node name.
 			resourceOptsList := getResourcesListOptions(d.getLabelData("app.kubernetes.io/name", ""))
 
-			// Create and start all watchers for list options
+			// Create and start all watchers for list options.
 			resourceWatchers := make(map[*watcher.Watch]nodeMeta)
 			for opts, v := range resourceOptsList {
 				resourceWatchers[createResourceWatcher(namespace, opts, k)] = v
