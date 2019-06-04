@@ -59,11 +59,11 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 		newWatch := createNodeWatcher(namespace, k)
 
 		// Create mutex for writing data.
-		mu := &sync.Mutex{}
+		mutex := &sync.Mutex{}
 
 		// Cache topology node data.
 		var nodesMap []nodeMeta
-		nodeDatas := make(map[string]string)
+		nodeData := make(map[string]string)
 		rawNodeData := make(map[string]topology.NodeData)
 		var d data
 		go func() {
@@ -82,9 +82,9 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 				}
 
 				// Listen to each watcher.
-				for watchh, metadata := range resourceWatchers {
-					go func(metadata nodeMeta, watchh *watcher.Watch) {
-						watchh.ListenWatcher(func(resourceEvent watch.Event) {
+				for w, metadata := range resourceWatchers {
+					go func(metadata nodeMeta, w *watcher.Watch) {
+						w.ListenWatcher(func(resourceEvent watch.Event) {
 							r := getResource(resourceEvent.Object)
 							item := rawNodeData[metadata.Id]
 							if item.Id == "" {
@@ -102,14 +102,14 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 							if err != nil {
 								k8log.Error(err, "failed to retrieve json encoding of node")
 							}
-							nodeDatas[item.Id] = string(nd)
+							nodeData[item.Id] = string(nd)
 
 							// Write the topology.
-							mu.Lock()
-							ws.WriteJSON(topology.GetSampleTopology(d.getNode(), nodeDatas, d.getGroups(), d.getEdges()))
-							mu.Unlock()
+							mutex.Lock()
+							ws.WriteJSON(topology.GetSampleTopology(d.getNode(), nodeData, d.getGroups(), d.getEdges()))
+							mutex.Unlock()
 						})
-					}(metadata, watchh)
+					}(metadata, w)
 				}
 			})
 		}()
