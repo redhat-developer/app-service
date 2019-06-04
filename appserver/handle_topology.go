@@ -93,7 +93,17 @@ func createTopology(ws *websocket.Conn, namespace string) {
 						if item.Id == "" {
 							var res []topology.Resource
 							res = append(res, getResource(metadata.Value))
-							rawNodeData[metadata.Id] = topology.NodeData{Resources: res, Id: metadata.Id, Type: metadata.Type, Data: topology.Data{Url: "dummy_url", EditUrl: "dummy_edit_url", BuilderImage: metadata.Name, DonutStatus: make(map[string]string)}}
+							rawNodeData[metadata.Id] = topology.NodeData{
+								Resources: res,
+								Id:        metadata.Id,
+								Type:      metadata.Type,
+								Data: topology.Data{
+									Url:          "dummy_url",
+									EditUrl:      "dummy_edit_url",
+									BuilderImage: metadata.Name,
+									DonutStatus:  make(map[string]string),
+								},
+							}
 							item = rawNodeData[metadata.Id]
 						}
 
@@ -298,10 +308,26 @@ func getNodeMetadata(event watch.Event) nodeMeta {
 	switch x.(type) {
 	case *deploymentconfigv1.DeploymentConfig:
 		dc := x.(*deploymentconfigv1.DeploymentConfig)
-		node = nodeMeta{Id: base64.StdEncoding.EncodeToString([]byte(dc.UID)), Name: dc.Name, Kind: "DeploymentConfig", Type: "workload", Value: x, Labels: dc.Labels, Annotations: dc.Annotations}
+		node = nodeMeta{
+			Id:          base64.StdEncoding.EncodeToString([]byte(dc.UID)),
+			Name:        dc.Name,
+			Kind:        "DeploymentConfig",
+			Type:        "workload",
+			Value:       x,
+			Labels:      dc.Labels,
+			Annotations: dc.Annotations,
+		}
 	case *appsv1.Deployment:
 		d := x.(*appsv1.Deployment)
-		node = nodeMeta{Id: base64.StdEncoding.EncodeToString([]byte(d.UID)), Name: d.Name, Kind: "Deployment", Type: "workload", Value: x, Labels: d.Labels, Annotations: d.Annotations}
+		node = nodeMeta{
+			Id:          base64.StdEncoding.EncodeToString([]byte(d.UID)),
+			Name:        d.Name,
+			Kind:        "Deployment",
+			Type:        "workload",
+			Value:       x,
+			Labels:      d.Labels,
+			Annotations: d.Annotations,
+		}
 	default:
 		fmt.Println(reflect.TypeOf(x))
 	}
@@ -323,7 +349,12 @@ func getResource(rx interface{}) topology.Resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of deployment config")
 		}
-		return topology.Resource{Name: deploymentConfig.Name, Kind: "DeploymentConfig", Metadata: string(meta), Status: string(status)}
+		r = topology.Resource{
+			Name:     deploymentConfig.Name,
+			Kind:     "DeploymentConfig",
+			Metadata: string(meta),
+			Status:   string(status),
+		}
 	case *appsv1.Deployment:
 		deployment := rx.(*appsv1.Deployment)
 		meta, err := json.Marshal(deployment.GetObjectMeta())
@@ -334,7 +365,12 @@ func getResource(rx interface{}) topology.Resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of deployment")
 		}
-		r = topology.Resource{Name: deployment.Name, Kind: "Deployment", Metadata: string(meta), Status: string(status)}
+		r = topology.Resource{
+			Name:     deployment.Name,
+			Kind:     "Deployment",
+			Metadata: string(meta),
+			Status:   string(status),
+		}
 	case *corev1.Service:
 		serv := rx.(*corev1.Service)
 		meta, err := json.Marshal(serv.GetObjectMeta())
@@ -345,7 +381,12 @@ func getResource(rx interface{}) topology.Resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of service")
 		}
-		r = topology.Resource{Name: serv.Name, Kind: "Service", Metadata: string(meta), Status: string(status)}
+		r = topology.Resource{
+			Name:     serv.Name,
+			Kind:     "Service",
+			Metadata: string(meta),
+			Status:   string(status),
+		}
 	case *routev1.Route:
 		route := rx.(*routev1.Route)
 		meta, err := json.Marshal(route.GetObjectMeta())
@@ -356,7 +397,11 @@ func getResource(rx interface{}) topology.Resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of route")
 		}
-		r = topology.Resource{Name: route.Name, Kind: "Route", Metadata: string(meta), Status: string(status)}
+		r = topology.Resource{Name: route.Name,
+			Kind:     "Route",
+			Metadata: string(meta),
+			Status:   string(status),
+		}
 	case *corev1.ReplicationController:
 		rc := rx.(*corev1.ReplicationController)
 		meta, err := json.Marshal(rc.GetObjectMeta())
@@ -367,7 +412,12 @@ func getResource(rx interface{}) topology.Resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of replication controller")
 		}
-		r = topology.Resource{Name: rc.Name, Kind: "ReplicationController", Metadata: string(meta), Status: string(status)}
+		r = topology.Resource{
+			Name:     rc.Name,
+			Kind:     "ReplicationController",
+			Metadata: string(meta),
+			Status:   string(status),
+		}
 	case *appsv1.ReplicaSet:
 		rs := rx.(*appsv1.ReplicaSet)
 		meta, err := json.Marshal(rs.GetObjectMeta())
@@ -378,7 +428,11 @@ func getResource(rx interface{}) topology.Resource {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of replica set")
 		}
-		r = topology.Resource{Name: rs.Name, Kind: "ReplicaSet", Metadata: string(meta), Status: string(status)}
+		r = topology.Resource{
+			Name:     rs.Name,
+			Kind:     "ReplicaSet",
+			Metadata: string(meta),
+			Status:   string(status)}
 	default:
 		fmt.Println(reflect.TypeOf(rx))
 	}
