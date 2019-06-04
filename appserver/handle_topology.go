@@ -1,24 +1,25 @@
 package appserver
 
 import (
-	//"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"reflect"
+	"sync"
+
 	"github.com/gorilla/websocket"
 	deploymentconfigv1 "github.com/openshift/api/apps/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/redhat-developer/app-service/appserver/topology"
 	"github.com/redhat-developer/app-service/kubeclient"
 	"github.com/redhat-developer/app-service/watcher"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"net/http"
-	"reflect"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sync"
 )
 
 var k8log = logf.Log
