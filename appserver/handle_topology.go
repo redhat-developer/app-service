@@ -25,7 +25,7 @@ import (
 var k8log = logf.Log
 
 type nodeMeta struct {
-	Id          string
+	ID          string
 	Name        string
 	Type        string
 	Kind        string
@@ -89,33 +89,33 @@ func createTopology(ws *websocket.Conn, namespace string) {
 				go func(metadata nodeMeta, w *watcher.Watch) {
 					w.ListenWatcher(func(resourceEvent watch.Event) {
 						r := getResource(resourceEvent.Object)
-						item := rawNodeData[metadata.Id]
-						if item.Id == "" {
+						item := rawNodeData[metadata.ID]
+						if item.ID == "" {
 							var res []topology.Resource
 							res = append(res, getResource(metadata.Value))
-							rawNodeData[metadata.Id] = topology.NodeData{
+							rawNodeData[metadata.ID] = topology.NodeData{
 								Resources: res,
-								Id:        metadata.Id,
+								ID:        metadata.ID,
 								Type:      metadata.Type,
 								Data: topology.Data{
-									Url:          "dummy_url",
-									EditUrl:      "dummy_edit_url",
+									URL:          "dummy_url",
+									EditURL:      "dummy_edit_url",
 									BuilderImage: metadata.Name,
 									DonutStatus:  make(map[string]string),
 								},
 							}
-							item = rawNodeData[metadata.Id]
+							item = rawNodeData[metadata.ID]
 						}
 
 						// If the resource does not exist yet, add it. Otherwise,
 						// update the old resource with the new one.
 						item.Resources = addOrUpdate(item.Resources, r)
-						rawNodeData[metadata.Id] = item
+						rawNodeData[metadata.ID] = item
 						nd, err := json.Marshal(item)
 						if err != nil {
 							k8log.Error(err, "failed to retrieve json encoding of node")
 						}
-						nodeData[item.Id] = string(nd)
+						nodeData[item.ID] = string(nd)
 
 						// Write the topology.
 						mutex.Lock()
@@ -197,7 +197,7 @@ func (d data) getEdges() []string {
 
 		for _, target := range targets {
 			for _, source := range sourceObjects {
-				e, err := json.Marshal(topology.Edge{Source: source.Id, Target: target})
+				e, err := json.Marshal(topology.Edge{Source: source.ID, Target: target})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -219,11 +219,11 @@ func (d data) getGroups() []string {
 	nodes = d.getLabelData("app.kubernetes.io/part-of", "")
 	for key, value := range nodes {
 		for _, v := range value {
-			gs = append(gs, v.Id)
+			gs = append(gs, v.ID)
 		}
 
 		// Create the group.
-		g, err := json.Marshal(topology.Group{Id: "group:" + key, Name: key, Nodes: gs})
+		g, err := json.Marshal(topology.Group{ID: "group:" + key, Name: key, Nodes: gs})
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
@@ -259,7 +259,7 @@ func getResourcesListOptions(dc map[string][]nodeMeta) map[metav1.ListOptions]no
 func (d data) getNode() []string {
 	var nodes []string
 	for _, node := range d.nodes {
-		n, err := json.Marshal(topology.Node{Name: node.Name, Id: node.Id})
+		n, err := json.Marshal(topology.Node{Name: node.Name, ID: node.ID})
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
@@ -294,7 +294,7 @@ func (d data) getAnnotationData(annotation string) map[string][]string {
 			k8log.Error(err, "failed to retrieve json dencoding of node")
 		}
 		for _, key := range keys {
-			nodes[key] = append(nodes[key], node.Id)
+			nodes[key] = append(nodes[key], node.ID)
 		}
 	}
 
@@ -309,7 +309,7 @@ func getNodeMetadata(event watch.Event) nodeMeta {
 	case *deploymentconfigv1.DeploymentConfig:
 		dc := x.(*deploymentconfigv1.DeploymentConfig)
 		node = nodeMeta{
-			Id:          base64.StdEncoding.EncodeToString([]byte(dc.UID)),
+			ID:          base64.StdEncoding.EncodeToString([]byte(dc.UID)),
 			Name:        dc.Name,
 			Kind:        "DeploymentConfig",
 			Type:        "workload",
@@ -320,7 +320,7 @@ func getNodeMetadata(event watch.Event) nodeMeta {
 	case *appsv1.Deployment:
 		d := x.(*appsv1.Deployment)
 		node = nodeMeta{
-			Id:          base64.StdEncoding.EncodeToString([]byte(d.UID)),
+			ID:          base64.StdEncoding.EncodeToString([]byte(d.UID)),
 			Name:        d.Name,
 			Kind:        "Deployment",
 			Type:        "workload",

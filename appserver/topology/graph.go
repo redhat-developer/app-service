@@ -4,28 +4,33 @@ import (
 	"encoding/json"
 )
 
+// Graph contains the groupds, edges and nodes of the graph.
 type Graph struct {
 	Nodes  []Node  `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
 	Edges  []Edge  `json:"edges,name=edges"`
 	Groups []Group `json:"groups,name=groups"`
 }
 
+// Node is the id and name of a node.
 type Node struct {
-	Id   string `json:"id,name=id"`
+	ID   string `json:"id,name=id"`
 	Name string `json:"name,name=name"`
 }
 
+// Edge is the source and target of a node.
 type Edge struct {
-	Source string `json:"source, name=source"`
-	Target string `json:"target, name=target"`
+	Source string `json:"source,name=source"`
+	Target string `json:"target,name=target"`
 }
 
+// Group is a group of nodes.
 type Group struct {
-	Id    string   `json:"id, name=id"`
-	Name  string   `json:"name, name=name"`
-	Nodes []string `json:"nodes, name=nodes"`
+	ID    string   `json:"id,name=id"`
+	Name  string   `json:"name,name=name"`
+	Nodes []string `json:"nodes,name=nodes"`
 }
 
+// Resource of a node.
 type Resource struct {
 	Metadata string `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Status   string `json:"status,omitempty" protobuf:"bytes,2,opt,name=spec"`
@@ -33,34 +38,41 @@ type Resource struct {
 	Kind     string `json:"kind,name=kind"`
 }
 
+// NodeData is the node data.
 type NodeData struct {
 	Type      string     `json:"type,name=type"`
-	Id        string     `json:"id,name=id"`
+	ID        string     `json:"id,name=id"`
 	Resources []Resource `json:"resource,omitempty" protobuf:"bytes,1,opt,name=resource"`
-	Data      Data       `json:"data, name=data"`
+	Data      Data       `json:"data,name=data"`
 }
 
+// NodeID is the node id.
 type NodeID string
 
+// Data value
 type Data struct {
-	Url          string            `json:"url, name=url"`
-	EditUrl      string            `json:"editUrl, name=editUrl"`
-	BuilderImage string            `json:"builderImage, name=builderImage"`
-	DonutStatus  map[string]string `json:"donutStatus, name=donutStatus"`
+	URL          string            `json:"url,name=url"`
+	EditURL      string            `json:"editUrl,name=editUrl"`
+	BuilderImage string            `json:"builderImage,name=builderImage"`
+	DonutStatus  map[string]string `json:"donutStatus,name=donutStatus"`
 }
 
+// Topology value.
 type Topology map[NodeID]NodeData
 
 type serverMetadata struct {
 	Commit string `json:"commit"`
 }
 
+// VisualizationResponse is the response of the api.
 type VisualizationResponse struct {
 	Graph          `json:"graph"`
 	Topology       `json:"topology"`
 	serverMetadata `json:"serverData"`
 }
 
+// GetSampleTopology compiles the nodes, resources, groups
+// and edges to create the json VisualizationResponse.
 func GetSampleTopology(nodes []string, resources map[string]string, groups []string, edges []string) VisualizationResponse {
 	var allNodes []Node
 	for _, elem := range nodes {
@@ -72,7 +84,7 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 		allNodes = append(allNodes, *dataNode)
 	}
 
-	m := make(map[NodeID]NodeData)
+	topology := make(map[NodeID]NodeData)
 	for k, elem := range resources {
 		dataResource := &NodeData{}
 		err := json.Unmarshal([]byte(elem), dataResource)
@@ -81,7 +93,7 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 		}
 		var key NodeID
 		key = NodeID(k)
-		m[key] = *dataResource
+		topology[key] = *dataResource
 	}
 
 	var allGroups []Group
@@ -106,7 +118,7 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 
 	return VisualizationResponse{
 		Graph:          Graph{Nodes: allNodes, Groups: allGroups, Edges: allEdges},
-		Topology:       m,
+		Topology:       topology,
 		serverMetadata: serverMetadata{Commit: "commit"},
 	}
 }
