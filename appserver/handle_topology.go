@@ -73,7 +73,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 	go func() {
 		newWatch.ListenWatcher(func(event watch.Event) {
 			node := getNodeMetadata(event)
-			nodesMap = append(nodesMap, node)
+			nodesMap = addOrUpdateNodeMeta(nodesMap, node)
 			d.nodes = nodesMap
 
 			// Get all list options for each unique node name.
@@ -110,7 +110,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 
 						// If the resource does not exist yet, add it. Otherwise,
 						// update the old resource with the new one.
-						item.Resources = addOrUpdate(item.Resources, r)
+						item.Resources = addOrUpdateTopologyResource(item.Resources, r)
 						rawNodeData[metadata.ID] = item
 						nd, err := json.Marshal(item)
 						if err != nil {
@@ -264,7 +264,7 @@ func (d data) getNode() []string {
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
-		nodes = append(nodes, string(n))
+		nodes = addOrUpdateString(nodes, string(n))
 	}
 
 	return nodes
@@ -442,9 +442,33 @@ func getResource(rx interface{}) topology.Resource {
 }
 
 // Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdate(slice []topology.Resource, i topology.Resource) []topology.Resource {
+func addOrUpdateTopologyResource(slice []topology.Resource, i topology.Resource) []topology.Resource {
 	for index, ele := range slice {
 		if ele == i {
+			slice[index] = i
+			return slice
+		}
+	}
+
+	return append(slice, i)
+}
+
+// Compare and add if resource does not exist or update if resource does exist.
+func addOrUpdateString(slice []string, i string) []string {
+	for index, ele := range slice {
+		if ele == i {
+			slice[index] = i
+			return slice
+		}
+	}
+
+	return append(slice, i)
+}
+
+// Compare and add if resource does not exist or update if resource does exist.
+func addOrUpdateNodeMeta(slice []nodeMeta, i nodeMeta) []nodeMeta {
+	for index, ele := range slice {
+		if ele.Name == i.Name {
 			slice[index] = i
 			return slice
 		}
