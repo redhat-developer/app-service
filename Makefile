@@ -75,6 +75,7 @@ test-coverage-html: ./vendor ./out/cover.out
 .PHONY: docker-image
 docker-image: Dockerfile
 	$(Q)docker build ${Q_FLAG} \
+		--network host \
 		--build-arg GO_PACKAGE_PATH=${GO_PACKAGE_PATH} \
 		--build-arg VERBOSE=${VERBOSE} \
 		. \
@@ -82,7 +83,7 @@ docker-image: Dockerfile
 
 .PHONY: docker-run
 docker-run: docker-image
-	$(Q)docker run -it --rm -p 8080:8080 ${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID}
+	$(Q)docker run -it --rm -p 8080:8080 --network host ${GO_PACKAGE_ORG_NAME}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID}
 
 .PHONY: docker-test
 docker-test: docker-image
