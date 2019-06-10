@@ -442,37 +442,37 @@ func getResource(rx interface{}) topology.Resource {
 }
 
 // Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdateTopologyResource(slice []topology.Resource, i topology.Resource) []topology.Resource {
-	for index, ele := range slice {
-		if ele == i {
-			slice[index] = i
+func addOrUpdateTopologyResource(slice []topology.Resource, r topology.Resource) []topology.Resource {
+	for index, element := range slice {
+		if element == r {
+			slice[index] = r
 			return slice
 		}
 	}
 
-	return append(slice, i)
+	return append(slice, r)
 }
 
 // Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdateString(slice []string, i string) []string {
-	for index, ele := range slice {
-		if ele == i {
-			slice[index] = i
+func addOrUpdateString(slice []string, str string) []string {
+	for index, element := range slice {
+		if element == str {
+			slice[index] = str
 			return slice
 		}
 	}
 
-	return append(slice, i)
+	return append(slice, str)
 }
 
 // Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdateNodeMeta(slice []nodeMeta, i nodeMeta) []nodeMeta {
-	for index, ele := range slice {
-		if ele.Name == i.Name {
-			slice[index] = i
+func addOrUpdateNodeMeta(slice []nodeMeta, nm nodeMeta) []nodeMeta {
+	for index, element := range slice {
+		if element.Name == nm.Name {
+			slice[index] = nm
 			return slice
 		}
 	}
 
-	return append(slice, i)
+	return append(slice, nm)
 }
