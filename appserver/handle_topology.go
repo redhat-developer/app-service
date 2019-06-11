@@ -145,13 +145,13 @@ func createTopology(ws *websocket.Conn, namespace string) {
 // Get topology resources.
 func (nMap nodesMap) getResources() map[string]string {
 	ndd := make(map[string]string)
-	for _, vvv := range nMap.nodes {
-		if vvv.nd.ID != "" {
-			ndstr, err := json.Marshal(vvv.nd)
+	for _, iData := range nMap.nodes {
+		if iData.nd.ID != "" {
+			ndstr, err := json.Marshal(iData.nd)
 			if err != nil {
 				k8log.Error(err, "failed to retrieve json encoding of node")
 			}
-			ndd[vvv.nd.ID] = string(ndstr)
+			ndd[iData.nd.ID] = string(ndstr)
 		}
 	}
 
