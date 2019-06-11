@@ -34,8 +34,13 @@ type nodeMeta struct {
 	Annotations map[string]string
 }
 
-type data struct {
-	nodes []nodeMeta
+type innerData struct {
+	nm nodeMeta
+	nd topology.NodeData
+}
+
+type nodesMap struct {
+	nodes map[string]innerData
 }
 
 var upgrader = websocket.Upgrader{
@@ -59,74 +64,250 @@ func createTopology(ws *websocket.Conn, namespace string) {
 	// Create a client.
 	k := kubeclient.NewKubeClient()
 
+	mutex := &sync.Mutex{}
+
 	// Create a node watcher.
 	newWatch := createNodeWatcher(namespace, k)
 
-	// Create mutex for writing data.
-	mutex := &sync.Mutex{}
-
-	// Cache topology node data.
-	var nodesMap []nodeMeta
-	nodeData := make(map[string]string)
-	rawNodeData := make(map[string]topology.NodeData)
-	var d data
+	var nMap nodesMap
+	nMap.nodes = make(map[string]innerData)
+	resourceWatchers := make(map[*watcher.Watch]nodeMeta)
 	go func() {
 		newWatch.ListenWatcher(func(event watch.Event) {
 			node := getNodeMetadata(event)
-			nodesMap = addOrUpdateNodeMeta(nodesMap, node)
-			d.nodes = nodesMap
+			// If event type was "deleted", delete the node. Otherwise,
+			// add or update the node.
+			if event.Type == "DELETED" {
+				nMap.deleteNode(node)
+			} else {
 
-			// Get all list options for each unique node name.
-			resourceOptsList := getResourcesListOptions(d.getLabelData("app.kubernetes.io/name", ""))
+				nMap.addOrUpdateNode(node)
+			}
+
+			// Get all the list options for each unique node name.
+			resourceOptsList := getResourcesListOptions(nMap.getLabelData("app.kubernetes.io/name", ""))
 
 			// Create and start all watchers for list options.
-			resourceWatchers := make(map[*watcher.Watch]nodeMeta)
 			for opts, v := range resourceOptsList {
 				resourceWatchers[createResourceWatcher(namespace, opts, k)] = v
 			}
 
-			// Listen to each watcher.
+			// Listen to each resource watcher.
 			for w, metadata := range resourceWatchers {
 				go func(metadata nodeMeta, w *watcher.Watch) {
 					w.ListenWatcher(func(resourceEvent watch.Event) {
-						r := getResource(resourceEvent.Object)
-						item := rawNodeData[metadata.ID]
-						if item.ID == "" {
-							var res []topology.Resource
-							res = append(res, getResource(metadata.Value))
-							rawNodeData[metadata.ID] = topology.NodeData{
-								Resources: res,
-								ID:        metadata.ID,
-								Type:      metadata.Type,
-								Data: topology.Data{
-									URL:          "dummy_url",
-									EditURL:      "dummy_edit_url",
-									BuilderImage: metadata.Name,
-									DonutStatus:  make(map[string]string),
-								},
-							}
-							item = rawNodeData[metadata.ID]
-						}
 
-						// If the resource does not exist yet, add it. Otherwise,
-						// update the old resource with the new one.
-						item.Resources = addOrUpdateTopologyResource(item.Resources, r)
-						rawNodeData[metadata.ID] = item
-						nd, err := json.Marshal(item)
-						if err != nil {
-							k8log.Error(err, "failed to retrieve json encoding of node")
+						// Get the resource.
+						r := getResource(resourceEvent.Object)
+						if resourceEvent.Type == "DELETED" {
+
+							// If the event  type was "deleted" delete the resource.
+							nMap.deleteNodeResource(metadata, r)
+						} else {
+							// If the event was to add create and add it.
+							item := nMap.nodes[metadata.Name].nd
+							if item.ID == "" {
+								var res []topology.Resource
+								res = append(res, getResource(metadata.Value))
+								item = topology.NodeData{
+									Resources: res,
+									ID:        metadata.ID,
+									Type:      metadata.Type,
+									Data: topology.Data{
+										URL:          "dummy_url",
+										EditURL:      "dummy_edit_url",
+										BuilderImage: metadata.Name,
+										DonutStatus:  make(map[string]string),
+									},
+								}
+								var iData innerData
+								iData.nm = metadata
+								iData.nd = item
+								nMap.nodes[metadata.Name] = iData
+							}
+							// If the resource does not exist yet, add it. Otherwise,
+							// update the old resource with the new one.
+							nMap.addOrUpdateNodeResource(metadata.Name, r)
+
 						}
-						nodeData[item.ID] = string(nd)
 
 						// Write the topology.
 						mutex.Lock()
-						ws.WriteJSON(topology.GetSampleTopology(d.getNode(), nodeData, d.getGroups(), d.getEdges()))
+						ws.WriteJSON(topology.GetSampleTopology(nMap.getNode(), nMap.getResources(), nMap.getGroups(), nMap.getEdges()))
 						mutex.Unlock()
 					})
 				}(metadata, w)
 			}
 		})
 	}()
+}
+
+// Get topology resources.
+func (nMap nodesMap) getResources() map[string]string {
+	ndd := make(map[string]string)
+	for _, vvv := range nMap.nodes {
+		if vvv.nd.ID != "" {
+			ndstr, err := json.Marshal(vvv.nd)
+			if err != nil {
+				k8log.Error(err, "failed to retrieve json encoding of node")
+			}
+			ndd[vvv.nd.ID] = string(ndstr)
+		}
+	}
+
+	return ndd
+}
+
+// Get topology edges.
+func (nMap nodesMap) getEdges() []string {
+	var edges []string
+	sourceObjects := make(map[string][]nodeMeta)
+	targetObjects := make(map[string][]string)
+
+	// Arrange keys and target objects.
+	targetObjects = nMap.getAnnotationData("app.openshift.io/connects-to")
+
+	// Arrange keys and source objects.
+	for targetKey, _ := range targetObjects {
+		sourceObjects[targetKey] = append(sourceObjects[targetKey], nMap.getLabelData("app.kubernetes.io/name", targetKey)[targetKey]...)
+	}
+
+	// Lookup the target key in the source key and
+	// construct the edge.
+	for targetKey, targets := range targetObjects {
+		sourceObjects := sourceObjects[targetKey]
+
+		for _, target := range targets {
+			for _, source := range sourceObjects {
+				e, err := json.Marshal(topology.Edge{Source: source.ID, Target: target})
+				if err != nil {
+					k8log.Error(err, "failed to retrieve json encoding of node")
+				}
+				edges = append(edges, string(e))
+			}
+		}
+	}
+
+	return edges
+}
+
+// Get topology groups.
+func (nMap nodesMap) getGroups() []string {
+	nodes := make(map[string][]nodeMeta)
+	var groups []string
+	var groupNodes []string
+
+	// Get all nodes which belong to the same part-of collection.
+	nodes = nMap.getLabelData("app.kubernetes.io/part-of", "")
+	for key, value := range nodes {
+		for _, v := range value {
+			groupNodes = append(groupNodes, v.ID)
+		}
+
+		// Create the group.
+		g, err := json.Marshal(topology.Group{ID: "group:" + key, Name: key, Nodes: groupNodes})
+		if err != nil {
+			k8log.Error(err, "failed to retrieve json encoding of node")
+		}
+
+		// Append the group to the list of groups.
+		groups = append(groups, string(g))
+	}
+
+	return groups
+}
+
+// Create topology node.
+func (nMap nodesMap) getNode() []string {
+	var nodes []string
+	for _, node := range nMap.nodes {
+		n, err := json.Marshal(topology.Node{Name: node.nm.Name, ID: node.nm.ID})
+		if err != nil {
+			k8log.Error(err, "failed to retrieve json encoding of node")
+		}
+		nodes = addOrUpdateString(nodes, string(n))
+	}
+
+	return nodes
+}
+
+// Get node label data.
+func (nMap nodesMap) getLabelData(label string, keyLabel string) map[string][]nodeMeta {
+	metadata := make(map[string][]nodeMeta)
+	for _, node := range nMap.nodes {
+
+		labelValue := node.nm.Labels[label]
+		if labelValue != "" {
+			if keyLabel == "" {
+				metadata[labelValue] = append(metadata[labelValue], node.nm)
+			} else if keyLabel == labelValue {
+				metadata[labelValue] = append(metadata[labelValue], node.nm)
+			}
+		}
+	}
+
+	return metadata
+}
+
+// Get node annotation data.
+func (nMap nodesMap) getAnnotationData(annotation string) map[string][]string {
+	nodes := make(map[string][]string)
+	for _, node := range nMap.nodes {
+		var keys []string
+		err := json.Unmarshal([]byte(node.nm.Annotations[annotation]), &keys)
+		if err != nil {
+			k8log.Error(err, "failed to retrieve json dencoding of node")
+		}
+		for _, key := range keys {
+			nodes[key] = append(nodes[key], node.nm.ID)
+		}
+	}
+
+	return nodes
+}
+
+// Delete entire node.
+func (nMap nodesMap) deleteNode(nm nodeMeta) {
+	delete(nMap.nodes, nm.Name)
+}
+
+// Compare and add if resource does not exist or update if resource does exist.
+func (nMap nodesMap) addOrUpdateNode(node nodeMeta) {
+	n := nMap.nodes[node.Name]
+	n.nm = node
+	nMap.nodes[node.Name] = n
+}
+
+// Delete a single resource on node.
+func (nMap nodesMap) deleteNodeResource(nm nodeMeta, r topology.Resource) {
+	var newSlice []topology.Resource
+	nodeData := nMap.nodes[nm.Name].nd
+	for _, res := range nodeData.Resources {
+		if res.Kind != r.Kind {
+			newSlice = append(newSlice, res)
+		}
+	}
+
+	nodeData.Resources = newSlice
+	iData := nMap.nodes[nm.Name]
+	iData.nd = nodeData
+	nMap.nodes[nm.Name] = iData
+}
+
+// Compare and add if resource does not exist or update if resource does exist.
+func (nMap nodesMap) addOrUpdateNodeResource(name string, r topology.Resource) {
+
+	for index, element := range nMap.nodes[name].nd.Resources {
+		if element.Kind == r.Kind {
+			nMap.nodes[name].nd.Resources[index] = r
+			return
+		}
+	}
+	node := nMap.nodes[name]
+	resources := node.nd.Resources
+	resources = append(resources, r)
+	node.nd.Resources = resources
+	nMap.nodes[name] = node
 }
 
 // Converts the HTTP connection to a websocket in order to stream data.
@@ -151,7 +332,7 @@ func createNodeWatcher(namespace string, k *kubeclient.KubeClient) *watcher.Watc
 		k.GetDeploymentConfigWatcher(namespace, listOptions, onGetWatchError),
 		k.GetDeploymentWatcher(namespace, listOptions, onGetWatchError),
 	)
-	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
+	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified, watch.Deleted})
 	newWatch.StartWatcher()
 
 	return newWatch
@@ -171,69 +352,10 @@ func createResourceWatcher(namespace string, opts metav1.ListOptions, k *kubecli
 		k.GetServiceWatcher(namespace, opts, onGetWatchError),
 		k.GetRouteWatcher(namespace, opts, onGetWatchError),
 	)
-	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified})
+	newWatch.SetFilters([]watch.EventType{watch.Added, watch.Modified, watch.Deleted})
 	newWatch.StartWatcher()
 
 	return newWatch
-}
-
-// Compile topology edges.
-func (d data) getEdges() []string {
-	var edges []string
-	sourceObjects := make(map[string][]nodeMeta)
-	targetObjects := make(map[string][]string)
-
-	// Arrange keys and target objects.
-	targetObjects = d.getAnnotationData("app.openshift.io/connects-to")
-
-	// Arrange keys and source objects.
-	for targetKey, _ := range targetObjects {
-		sourceObjects[targetKey] = append(sourceObjects[targetKey], d.getLabelData("app.kubernetes.io/name", targetKey)[targetKey]...)
-	}
-
-	// Lookup the target key in the source key and
-	// construct the edge.
-	for targetKey, targets := range targetObjects {
-		sourceObjects := sourceObjects[targetKey]
-
-		for _, target := range targets {
-			for _, source := range sourceObjects {
-				e, err := json.Marshal(topology.Edge{Source: source.ID, Target: target})
-				if err != nil {
-					k8log.Error(err, "failed to retrieve json encoding of node")
-				}
-				edges = append(edges, string(e))
-			}
-		}
-	}
-
-	return edges
-}
-
-// Compile topology groups.
-func (d data) getGroups() []string {
-	nodes := make(map[string][]nodeMeta)
-	var groups []string
-	var gs []string
-
-	// Get all nodes which belong to the same part-of collection.
-	nodes = d.getLabelData("app.kubernetes.io/part-of", "")
-	for key, value := range nodes {
-		for _, v := range value {
-			gs = append(gs, v.ID)
-		}
-
-		// Create the group.
-		g, err := json.Marshal(topology.Group{ID: "group:" + key, Name: key, Nodes: gs})
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of node")
-		}
-
-		// Append the group to the list of groups.
-		groups = append(groups, string(g))
-	}
-
-	return groups
 }
 
 // Compile the metav1.ListOptions for resources.
@@ -247,59 +369,13 @@ func getResourcesListOptions(dc map[string][]nodeMeta) map[metav1.ListOptions]no
 			options := metav1.ListOptions{
 				LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", labelKey),
 			}
-			for _, dc := range dcNodes {
-				listOptions[options] = dc
+			for _, dcc := range dcNodes {
+				listOptions[options] = dcc
 			}
 		}
 	}
 
 	return listOptions
-}
-
-// Create topology node.
-func (d data) getNode() []string {
-	var nodes []string
-	for _, node := range d.nodes {
-		n, err := json.Marshal(topology.Node{Name: node.Name, ID: node.ID})
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of node")
-		}
-		nodes = addOrUpdateString(nodes, string(n))
-	}
-
-	return nodes
-}
-
-// Get node label data.
-func (d data) getLabelData(label string, keyLabel string) map[string][]nodeMeta {
-	metadata := make(map[string][]nodeMeta)
-	for _, node := range d.nodes {
-		labelValue := node.Labels[label]
-		if keyLabel == "" {
-			metadata[labelValue] = append(metadata[labelValue], node)
-		} else if keyLabel == labelValue {
-			metadata[labelValue] = append(metadata[labelValue], node)
-		}
-	}
-
-	return metadata
-}
-
-// Get node annotation data.
-func (d data) getAnnotationData(annotation string) map[string][]string {
-	nodes := make(map[string][]string)
-	for _, node := range d.nodes {
-		var keys []string
-		err := json.Unmarshal([]byte(node.Annotations[annotation]), &keys)
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json dencoding of node")
-		}
-		for _, key := range keys {
-			nodes[key] = append(nodes[key], node.ID)
-		}
-	}
-
-	return nodes
 }
 
 // Gets node metadata.
@@ -442,18 +518,6 @@ func getResource(rx interface{}) topology.Resource {
 }
 
 // Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdateTopologyResource(slice []topology.Resource, r topology.Resource) []topology.Resource {
-	for index, element := range slice {
-		if element == r {
-			slice[index] = r
-			return slice
-		}
-	}
-
-	return append(slice, r)
-}
-
-// Compare and add if resource does not exist or update if resource does exist.
 func addOrUpdateString(slice []string, str string) []string {
 	for index, element := range slice {
 		if element == str {
@@ -463,16 +527,4 @@ func addOrUpdateString(slice []string, str string) []string {
 	}
 
 	return append(slice, str)
-}
-
-// Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdateNodeMeta(slice []nodeMeta, nm nodeMeta) []nodeMeta {
-	for index, element := range slice {
-		if element.Name == nm.Name {
-			slice[index] = nm
-			return slice
-		}
-	}
-
-	return append(slice, nm)
 }
