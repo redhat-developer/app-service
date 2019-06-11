@@ -199,13 +199,13 @@ func (nMap nodesMap) getGroups() []string {
 
 	// Get all nodes which belong to the same part-of collection.
 	nodes = nMap.getLabelData("app.kubernetes.io/part-of", "")
-	for key, value := range nodes {
-		for _, v := range value {
-			groupNodes = append(groupNodes, v.ID)
+	for groupName, nodeMetas := range nodes {
+		for _, nm := range nodeMetas {
+			groupNodes = append(groupNodes, nm.ID)
 		}
 
 		// Create the group.
-		g, err := json.Marshal(topology.Group{ID: "group:" + key, Name: key, Nodes: groupNodes})
+		g, err := json.Marshal(topology.Group{ID: "group:" + groupName, Name: groupName, Nodes: groupNodes})
 		if err != nil {
 			k8log.Error(err, "failed to retrieve json encoding of node")
 		}
