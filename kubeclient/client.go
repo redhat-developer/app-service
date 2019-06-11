@@ -36,7 +36,7 @@ func NewKubeClient() *KubeClient {
 
 func getKubeConfig() rest.Config {
 	host := "https://api.tkurian23.devcluster.openshift.com:6443"
-	bearerToken := "xH8aEz40u3kCJrEWe6uurOwRT_qu-1ymiuMCw2-OOSk"
+	bearerToken := "V7qSMXz43MgAZIuJ5H34TnfrYtsOLfjIoA7HcALks78"
 
 	return getOpenshiftAPIConfig(host, bearerToken)
 }
