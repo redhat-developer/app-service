@@ -64,6 +64,8 @@ func createTopology(ws *websocket.Conn, namespace string) {
 	// Create a client.
 	k := kubeclient.NewKubeClient()
 
+	mutex := &sync.Mutex{}
+
 	// Create a node watcher.
 	newWatch := createNodeWatcher(namespace, k)
 
@@ -78,7 +80,6 @@ func createTopology(ws *websocket.Conn, namespace string) {
 			} else {
 				d.addOrUpdateNode(node)
 			}
-			d.writeToOutput(ws)
 
 			// Get all list options for each unique node name.
 			resourceOptsList := getResourcesListOptions(d.getLabelData("app.kubernetes.io/name", ""))
@@ -119,34 +120,30 @@ func createTopology(ws *websocket.Conn, namespace string) {
 							// If the resource does not exist yet, add it. Otherwise,
 							// update the old resource with the new one.
 							d.addOrUpdateNodeResource(metadata.Name, r)
+
 						}
 
+						ndd := make(map[string]string)
+						for _, vvv := range d.nodes {
+							if vvv.nd.ID != "" {
+								ndstr, err := json.Marshal(vvv.nd)
+								if err != nil {
+									k8log.Error(err, "failed to retrieve json encoding of node")
+								}
+								ndd[vvv.nd.ID] = string(ndstr)
+							}
+						}
+
+						// Write the topology.
+						mutex.Lock()
+						ws.WriteJSON(topology.GetSampleTopology(d.getNode(), ndd, d.getGroups(), d.getEdges()))
+						mutex.Unlock()
 					})
 				}(metadata, w)
 			}
 
 		})
 	}()
-}
-
-func (d data) writeToOutput(ws *websocket.Conn) {
-	mutex := &sync.Mutex{}
-
-	ndd := make(map[string]string)
-	for _, vvv := range d.nodes {
-		if vvv.nd.ID != "" {
-			ndstr, err := json.Marshal(vvv.nd)
-			if err != nil {
-				k8log.Error(err, "failed to retrieve json encoding of node")
-			}
-			ndd[vvv.nd.ID] = string(ndstr)
-		}
-	}
-
-	// Write the topology.
-	mutex.Lock()
-	ws.WriteJSON(topology.GetSampleTopology(d.getNode(), ndd, d.getGroups(), d.getEdges()))
-	mutex.Unlock()
 }
 
 // Converts the HTTP connection to a websocket in order to stream data.
@@ -334,19 +331,19 @@ func (d data) deleteNode(nm nodeMeta) {
 }
 
 func (d data) deleteNodeResource(nm nodeMeta, r topology.Resource) {
-	fmt.Println("HEREEEE")
-	nodes := d.nodes[nm.Name]
-	//nodesResource := nodes.nd.Resources
-
+	nodes := d.nodes[nm.Name].nd
 	var newSlice []topology.Resource
 
-	for _, res := range nodes.nd.Resources {
+	for _, res := range nodes.Resources {
 		if res.Kind != r.Kind {
 			newSlice = append(newSlice, res)
 		}
 	}
-	nodes.nd.Resources = newSlice
-	d.nodes[nm.Name] = nodes
+
+	nodes.Resources = newSlice
+	blah := d.nodes[nm.Name]
+	blah.nd = nodes
+	d.nodes[nm.Name] = blah
 }
 
 // Compile the metav1.ListOptions for resources.
