@@ -64,6 +64,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 	// Create a client.
 	k := kubeclient.NewKubeClient()
 
+	// Create mutex.
 	mutex := &sync.Mutex{}
 
 	// Create a node watcher.
