@@ -144,18 +144,18 @@ func createTopology(ws *websocket.Conn, namespace string) {
 
 // Get topology resources.
 func (nMap nodesMap) getResources() map[string]string {
-	ndd := make(map[string]string)
+	resourceMap := make(map[string]string)
 	for _, iData := range nMap.nodes {
 		if iData.nd.ID != "" {
-			ndstr, err := json.Marshal(iData.nd)
+			nData, err := json.Marshal(iData.nd)
 			if err != nil {
 				k8log.Error(err, "failed to retrieve json encoding of node")
 			}
-			ndd[iData.nd.ID] = string(ndstr)
+			resourceMap[iData.nd.ID] = string(nData)
 		}
 	}
 
-	return ndd
+	return resourceMap
 }
 
 // Get topology edges.
