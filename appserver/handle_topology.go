@@ -88,13 +88,13 @@ func createTopology(ws *websocket.Conn, namespace string) {
 			resourceOptsList := getResourcesListOptions(nMap.getLabelData("app.kubernetes.io/name", ""))
 
 			// Create and start all watchers for list options.
-			for opts, v := range resourceOptsList {
-				resourceWatchers[createResourceWatcher(namespace, opts, k)] = v
+			for opts, nm := range resourceOptsList {
+				resourceWatchers[createResourceWatcher(namespace, opts, k)] = nm
 			}
 
 			// Listen to each resource watcher.
-			for w, metadata := range resourceWatchers {
-				go func(metadata nodeMeta, w *watcher.Watch) {
+			for w, rwNode := range resourceWatchers {
+				go func(rwNode nodeMeta, w *watcher.Watch) {
 					w.ListenWatcher(func(resourceEvent watch.Event) {
 
 						// Get the resource.
@@ -102,32 +102,32 @@ func createTopology(ws *websocket.Conn, namespace string) {
 						if resourceEvent.Type == "DELETED" {
 
 							// If the event  type was "deleted" delete the resource.
-							nMap.deleteNodeResource(metadata, r)
+							nMap.deleteNodeResource(rwNode, r)
 						} else {
 							// If the event was to add create and add it.
-							item := nMap.nodes[metadata.Name].nd
+							item := nMap.nodes[rwNode.Name].nd
 							if item.ID == "" {
-								var res []topology.Resource
-								res = append(res, getResource(metadata.Value))
+								var resource []topology.Resource
+								resource = append(resource, getResource(rwNode.Value))
 								item = topology.NodeData{
-									Resources: res,
-									ID:        metadata.ID,
-									Type:      metadata.Type,
+									Resources: resource,
+									ID:        rwNode.ID,
+									Type:      rwNode.Type,
 									Data: topology.Data{
 										URL:          "dummy_url",
 										EditURL:      "dummy_edit_url",
-										BuilderImage: metadata.Name,
+										BuilderImage: rwNode.Name,
 										DonutStatus:  make(map[string]string),
 									},
 								}
 								var iData innerData
-								iData.nm = metadata
+								iData.nm = rwNode
 								iData.nd = item
-								nMap.nodes[metadata.Name] = iData
+								nMap.nodes[rwNode.Name] = iData
 							}
 							// If the resource does not exist yet, add it. Otherwise,
 							// update the old resource with the new one.
-							nMap.addOrUpdateNodeResource(metadata.Name, r)
+							nMap.addOrUpdateNodeResource(rwNode.Name, r)
 
 						}
 
@@ -136,7 +136,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 						ws.WriteJSON(topology.GetSampleTopology(nMap.getNode(), nMap.getResources(), nMap.getGroups(), nMap.getEdges()))
 						mutex.Unlock()
 					})
-				}(metadata, w)
+				}(rwNode, w)
 			}
 		})
 	}()
@@ -233,25 +233,25 @@ func (nMap nodesMap) getNode() []string {
 
 // Get node label data.
 func (nMap nodesMap) getLabelData(label string, keyLabel string) map[string][]nodeMeta {
-	metadata := make(map[string][]nodeMeta)
+	labelMap := make(map[string][]nodeMeta)
 	for _, node := range nMap.nodes {
 
-		labelValue := node.nm.Labels[label]
-		if labelValue != "" {
+		lkey := node.nm.Labels[label]
+		if lkey != "" {
 			if keyLabel == "" {
-				metadata[labelValue] = append(metadata[labelValue], node.nm)
-			} else if keyLabel == labelValue {
-				metadata[labelValue] = append(metadata[labelValue], node.nm)
+				labelMap[lkey] = append(labelMap[lkey], node.nm)
+			} else if keyLabel == lkey {
+				labelMap[lkey] = append(labelMap[lkey], node.nm)
 			}
 		}
 	}
 
-	return metadata
+	return labelMap
 }
 
 // Get node annotation data.
 func (nMap nodesMap) getAnnotationData(annotation string) map[string][]string {
-	nodes := make(map[string][]string)
+	annotationsMap := make(map[string][]string)
 	for _, node := range nMap.nodes {
 		var keys []string
 		err := json.Unmarshal([]byte(node.nm.Annotations[annotation]), &keys)
@@ -259,11 +259,11 @@ func (nMap nodesMap) getAnnotationData(annotation string) map[string][]string {
 			k8log.Error(err, "failed to retrieve json dencoding of node")
 		}
 		for _, key := range keys {
-			nodes[key] = append(nodes[key], node.nm.ID)
+			annotationsMap[key] = append(annotationsMap[key], node.nm.ID)
 		}
 	}
 
-	return nodes
+	return annotationsMap
 }
 
 // Delete entire node.
@@ -273,18 +273,18 @@ func (nMap nodesMap) deleteNode(nm nodeMeta) {
 
 // Compare and add if resource does not exist or update if resource does exist.
 func (nMap nodesMap) addOrUpdateNode(node nodeMeta) {
-	n := nMap.nodes[node.Name]
-	n.nm = node
-	nMap.nodes[node.Name] = n
+	iData := nMap.nodes[node.Name]
+	iData.nm = node
+	nMap.nodes[node.Name] = iData
 }
 
 // Delete a single resource on node.
 func (nMap nodesMap) deleteNodeResource(nm nodeMeta, r topology.Resource) {
 	var newSlice []topology.Resource
 	nodeData := nMap.nodes[nm.Name].nd
-	for _, res := range nodeData.Resources {
-		if res.Kind != r.Kind {
-			newSlice = append(newSlice, res)
+	for _, resource := range nodeData.Resources {
+		if resource.Kind != r.Kind {
+			newSlice = append(newSlice, resource)
 		}
 	}
 
@@ -359,18 +359,18 @@ func createResourceWatcher(namespace string, opts metav1.ListOptions, k *kubecli
 }
 
 // Compile the metav1.ListOptions for resources.
-func getResourcesListOptions(dc map[string][]nodeMeta) map[metav1.ListOptions]nodeMeta {
+func getResourcesListOptions(nMetaMap map[string][]nodeMeta) map[metav1.ListOptions]nodeMeta {
 	listOptions := make(map[metav1.ListOptions]nodeMeta)
 
 	// For each node, create the metav1.ListOptions based off
 	// the app.kubernetes.io/name label.
-	for labelKey, dcNodes := range dc {
-		if labelKey != "" {
+	for lKey, nMetas := range nMetaMap {
+		if lKey != "" {
 			options := metav1.ListOptions{
-				LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", labelKey),
+				LabelSelector: fmt.Sprintf("app.kubernetes.io/name=%s", lKey),
 			}
-			for _, dcc := range dcNodes {
-				listOptions[options] = dcc
+			for _, meta := range nMetas {
+				listOptions[options] = meta
 			}
 		}
 	}
