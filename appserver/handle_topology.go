@@ -53,7 +53,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get the namespace and convert the connection to a web stocket.
-		namespace := "default"
+		namespace := r.FormValue("namespace")
 		ws := convertHTTPToWebSocket(w, r)
 		createTopology(ws, namespace)
 	}
@@ -61,6 +61,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 
 // Create and stream topology.
 func createTopology(ws *websocket.Conn, namespace string) {
+
 	// Create a client.
 	k := kubeclient.NewKubeClient()
 
@@ -81,7 +82,6 @@ func createTopology(ws *websocket.Conn, namespace string) {
 			if event.Type == "DELETED" {
 				nMap.deleteNode(node)
 			} else {
-
 				nMap.addOrUpdateNode(node)
 			}
 
@@ -129,7 +129,6 @@ func createTopology(ws *websocket.Conn, namespace string) {
 							// If the resource does not exist yet, add it. Otherwise,
 							// update the old resource with the new one.
 							nMap.addOrUpdateNodeResource(rwNode.Name, r)
-
 						}
 
 						// Write the topology.
@@ -315,6 +314,7 @@ func (nMap nodesMap) addOrUpdateNodeResource(name string, r topology.Resource) {
 func convertHTTPToWebSocket(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
 		fmt.Println(err)
 	}
