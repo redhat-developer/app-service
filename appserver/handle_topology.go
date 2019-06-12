@@ -407,7 +407,7 @@ func getNodeMetadata(event watch.Event) nodeMeta {
 			Annotations: d.Annotations,
 		}
 	default:
-		fmt.Println(reflect.TypeOf(x))
+		k8log.Info(fmt.Sprintf("failed to recognize node type: %s", reflect.TypeOf(x)))
 	}
 
 	return node
@@ -512,7 +512,7 @@ func getResource(rx interface{}) topology.Resource {
 			Metadata: string(meta),
 			Status:   string(status)}
 	default:
-		fmt.Println(reflect.TypeOf(rx))
+		k8log.Info(fmt.Sprintf("failed to recognize resource type: %s", reflect.TypeOf(rx)))
 	}
 
 	return r
