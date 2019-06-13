@@ -76,7 +76,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 	resourceWatchers := make(map[*watcher.Watch]nodeMeta)
 	go func() {
 		newWatch.ListenWatcher(func(event watch.Event) {
-			node := getNodeMetadata(event)
+			node := getNodeMetadata(event.Object)
 			// If event type was "deleted", delete the node. Otherwise,
 			// add or update the node.
 			if event.Type == "DELETED" {
@@ -380,8 +380,7 @@ func getResourcesListOptions(nMetaMap map[string][]nodeMeta) map[metav1.ListOpti
 }
 
 // Gets node metadata.
-func getNodeMetadata(event watch.Event) nodeMeta {
-	var x interface{} = event.Object
+func getNodeMetadata(x interface{}) nodeMeta {
 	var node nodeMeta
 	switch x.(type) {
 	case *deploymentconfigv1.DeploymentConfig:
