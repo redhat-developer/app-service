@@ -74,7 +74,7 @@ type VisualizationResponse struct {
 // GetSampleTopology compiles the nodes, resources, groups
 // and edges to create the json VisualizationResponse.
 func GetSampleTopology(nodes []string, resources map[string]string, groups []string, edges []string) VisualizationResponse {
-	var allNodes []Node
+	allNodes := []Node{}
 	for _, elem := range nodes {
 		dataNode := &Node{}
 		err := json.Unmarshal([]byte(elem), dataNode)
@@ -96,7 +96,7 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 		topology[key] = *dataResource
 	}
 
-	var allGroups []Group
+	allGroups := []Group{}
 	for _, elem := range groups {
 		dataNode := &Group{}
 		err := json.Unmarshal([]byte(elem), dataNode)
@@ -106,7 +106,7 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 		allGroups = append(allGroups, *dataNode)
 	}
 
-	var allEdges []Edge
+	allEdges := []Edge{}
 	for _, elem := range edges {
 		dataNode := &Edge{}
 		err := json.Unmarshal([]byte(elem), dataNode)
