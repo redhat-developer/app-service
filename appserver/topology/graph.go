@@ -36,6 +36,7 @@ type Resource struct {
 	Status   string `json:"status,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	Name     string `json:"name,name=name"`
 	Kind     string `json:"kind,name=kind"`
+	Spec     string `json:"spec,name=spec"`
 }
 
 // NodeData is the node data.
