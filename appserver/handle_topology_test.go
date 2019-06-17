@@ -22,6 +22,7 @@ func TestAppServer_GetResources(t *testing.T) {
 	iData.nd.Data.DonutStatus = make(map[string]string)
 	iData.nd.Data.EditURL = "https://test/url"
 	iData.nd.Data.URL = "https://test/url"
+	iData.nd.Name = "testapp"
 	iData.nm.ID = "1"
 	iData.nm.Labels = labels
 	iData.nm.Name = "testapp"
@@ -30,7 +31,7 @@ func TestAppServer_GetResources(t *testing.T) {
 	iData.nm.Value = make(map[string]string)
 
 	expected := make(map[string]string)
-	expected["1"] = "{\"type\":\"workload\",\"id\":\"1\",\"data\":{\"url\":\"https://test/url\",\"editUrl\":\"https://test/url\",\"builderImage\":\"test\",\"donutStatus\":{}}}"
+	expected["1"] = "{\"name\":\"testapp\",\"type\":\"workload\",\"id\":\"1\",\"data\":{\"url\":\"https://test/url\",\"editUrl\":\"https://test/url\",\"builderImage\":\"test\",\"donutStatus\":{}}}"
 
 	nMap.nodes = make(map[string]innerData)
 	nMap.nodes["testing"] = iData
@@ -51,27 +52,23 @@ func TestAppServer_GetEdges(t *testing.T) {
 	nMap.nodes["nodejs"] = nodejs
 
 	edges := nMap.getEdges()
-	var expected []string
-	expected = append(expected, "{\"id\":\"2\",\"source\":\"2\",\"target\":\"1\",\"type\":\"connects-to\"}")
-
-	require.Equal(t, expected, edges)
+	require.Equal(t, "2", edges[0].ID)
+	require.Equal(t, "2", edges[0].Source)
+	require.Equal(t, "1", edges[0].Target)
+	require.Equal(t, "connects-to", edges[0].Type)
 
 }
 
 func TestAppServer_GetGroups(t *testing.T) {
 	var nMap nodesMap
 	nginx := createResource("1", "DeploymentConfig", "nginx", "testapp", "nodejs")
-	nodejs := createResource("2", "DeploymentConfig", "nodejs", "testapp", "")
-
 	nMap.nodes = make(map[string]innerData)
 	nMap.nodes["nginx"] = nginx
-	nMap.nodes["nodejs"] = nodejs
 
 	groups := nMap.getGroups()
-	var expected []string
-	expected = append(expected, "{\"id\":\"group:testapp\",\"name\":\"testapp\",\"nodes\":[\"1\",\"2\"]}")
 
-	require.Equal(t, expected, groups)
+	require.Equal(t, "testapp", groups[0].Name)
+	require.Equal(t, "group:testapp", groups[0].ID)
 }
 
 func TestAppServer_GetNode(t *testing.T) {

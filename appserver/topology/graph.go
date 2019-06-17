@@ -2,7 +2,6 @@ package topology
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 // Graph contains the groupds, edges and nodes of the graph.
@@ -44,6 +43,7 @@ type Resource struct {
 
 // NodeData is the node data.
 type NodeData struct {
+	Name      string     `json:"name,name=name"`
 	Type      string     `json:"type,name=type"`
 	ID        string     `json:"id,name=id"`
 	Resources []Resource `json:"resource,omitempty" protobuf:"bytes,1,opt,name=resource"`
@@ -77,7 +77,7 @@ type VisualizationResponse struct {
 
 // GetSampleTopology compiles the nodes, resources, groups
 // and edges to create the json VisualizationResponse.
-func GetSampleTopology(nodes []string, resources map[string]string, groups []string, edges []string) VisualizationResponse {
+func GetSampleTopology(nodes []string, resources map[string]string, groups []Group, edges []Edge) VisualizationResponse {
 	allNodes := []Node{}
 	for _, elem := range nodes {
 		dataNode := &Node{}
@@ -100,30 +100,8 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 		topology[key] = *dataResource
 	}
 
-	allGroups := []Group{}
-	fmt.Println(groups)
-	for _, elem := range groups {
-		dataNode := &Group{}
-		err := json.Unmarshal([]byte(elem), dataNode)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(dataNode)
-		allGroups = append(allGroups, *dataNode)
-	}
-
-	allEdges := []Edge{}
-	for _, elem := range edges {
-		dataNode := &Edge{}
-		err := json.Unmarshal([]byte(elem), dataNode)
-		if err != nil {
-			panic(err)
-		}
-		allEdges = append(allEdges, *dataNode)
-	}
-
 	return VisualizationResponse{
-		Graph:          Graph{Nodes: allNodes, Groups: allGroups, Edges: allEdges},
+		Graph:          Graph{Nodes: allNodes, Groups: groups, Edges: edges},
 		Topology:       topology,
 		serverMetadata: serverMetadata{Commit: "commit"},
 	}

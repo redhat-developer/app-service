@@ -111,6 +111,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 								var resource []topology.Resource
 								resource = append(resource, getResource(rwNode.Value))
 								item = topology.NodeData{
+									Name:      rwNode.Name,
 									Resources: resource,
 									ID:        rwNode.ID,
 									Type:      rwNode.Type,
@@ -159,8 +160,8 @@ func (nMap nodesMap) getResources() map[string]string {
 }
 
 // Get topology edges.
-func (nMap nodesMap) getEdges() []string {
-	var edges []string
+func (nMap nodesMap) getEdges() []topology.Edge {
+	var edges []topology.Edge
 	sourceObjects := make(map[string][]nodeMeta)
 	targetObjects := make(map[string][]string)
 
@@ -179,11 +180,8 @@ func (nMap nodesMap) getEdges() []string {
 
 		for _, target := range targets {
 			for _, source := range sourceObjects {
-				e, err := json.Marshal(topology.Edge{ID: source.ID, Source: source.ID, Target: target, Type: "connects-to"})
-				if err != nil {
-					k8log.Error(err, "failed to retrieve json encoding of node")
-				}
-				edges = append(edges, string(e))
+				e := topology.Edge{ID: source.ID, Source: source.ID, Target: target, Type: "connects-to"}
+				edges = append(edges, e)
 			}
 		}
 	}
@@ -192,14 +190,13 @@ func (nMap nodesMap) getEdges() []string {
 }
 
 // Get topology groups.
-func (nMap nodesMap) getGroups() []string {
+func (nMap nodesMap) getGroups() []topology.Group {
 	nodes := make(map[string][]nodeMeta)
-	var groups []string
+	var groups []topology.Group
 	var groupNodes []string
 
 	// Get all nodes which belong to the same part-of collection.
 	nodes = nMap.getLabelData("app.kubernetes.io/part-of", "")
-	fmt.Println("HEREEEEEEEEEEEEEE")
 	for groupName, nodeMetas := range nodes {
 		fmt.Println(nodeMetas)
 		for _, nm := range nodeMetas {
@@ -207,13 +204,10 @@ func (nMap nodesMap) getGroups() []string {
 		}
 
 		// Create the group.
-		g, err := json.Marshal(topology.Group{ID: "group:" + groupName, Name: groupName, Nodes: groupNodes})
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of node")
-		}
+		g := topology.Group{ID: "group:" + groupName, Name: groupName, Nodes: groupNodes}
 
 		// Append the group to the list of groups.
-		groups = append(groups, string(g))
+		groups = append(groups, g)
 	}
 
 	return groups
@@ -239,8 +233,6 @@ func (nMap nodesMap) getLabelData(label string, keyLabel string) map[string][]no
 	for _, node := range nMap.nodes {
 
 		lkey := node.nm.Labels[label]
-		fmt.Println("TINAAAAAAAAAAAAAAAAAA")
-		fmt.Println(node.nm.Labels)
 		if lkey != "" {
 			if keyLabel == "" {
 				labelMap[lkey] = append(labelMap[lkey], node.nm)
