@@ -2,6 +2,7 @@ package topology
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 // Graph contains the groupds, edges and nodes of the graph.
@@ -19,8 +20,10 @@ type Node struct {
 
 // Edge is the source and target of a node.
 type Edge struct {
+	ID     string `json:"id,name=id"`
 	Source string `json:"source,name=source"`
 	Target string `json:"target,name=target"`
+	Type   string `json:"type,name=type"`
 }
 
 // Group is a group of nodes.
@@ -98,12 +101,14 @@ func GetSampleTopology(nodes []string, resources map[string]string, groups []str
 	}
 
 	allGroups := []Group{}
+	fmt.Println(groups)
 	for _, elem := range groups {
 		dataNode := &Group{}
 		err := json.Unmarshal([]byte(elem), dataNode)
 		if err != nil {
 			panic(err)
 		}
+		fmt.Println(dataNode)
 		allGroups = append(allGroups, *dataNode)
 	}
 

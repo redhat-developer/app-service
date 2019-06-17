@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	deploymentconfigv1 "github.com/openshift/api/apps/v1"
 	"github.com/redhat-developer/app-service/appserver/topology"
 	"github.com/stretchr/testify/require"
 
@@ -53,7 +52,7 @@ func TestAppServer_GetEdges(t *testing.T) {
 
 	edges := nMap.getEdges()
 	var expected []string
-	expected = append(expected, "{\"source\":\"2\",\"target\":\"1\"}")
+	expected = append(expected, "{\"id\":\"2\",\"source\":\"2\",\"target\":\"1\",\"type\":\"connects-to\"}")
 
 	require.Equal(t, expected, edges)
 
@@ -193,6 +192,10 @@ func TestAppServer_DeleteNodeResource(t *testing.T) {
 
 	nMap.nodes = make(map[string]innerData)
 	nMap.nodes["nodejs"] = nodejs
+	nMap.addOrUpdateNodeResource("nodejs", resourceDeploymentConfig)
+	nMap.addOrUpdateNodeResource("nodejs", resourceService)
+
+	require.Equal(t, 2, len(nMap.nodes["nodejs"].nd.Resources))
 
 	nMap.deleteNodeResource(nodejs.nm, resourceService)
 
@@ -222,6 +225,7 @@ func TestAppServer_AddOrUpdateNodeResource(t *testing.T) {
 
 	nMap.nodes = make(map[string]innerData)
 	nMap.nodes["nodejs"] = nodejs
+	nMap.addOrUpdateNodeResource("nodejs", resourceDeploymentConfig)
 
 	require.Equal(t, 1, len(nMap.nodes["nodejs"].nd.Resources))
 	require.Equal(t, "nodejs", nMap.nodes["nodejs"].nd.Resources[0].Name)

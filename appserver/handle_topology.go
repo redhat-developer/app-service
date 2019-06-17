@@ -179,7 +179,7 @@ func (nMap nodesMap) getEdges() []string {
 
 		for _, target := range targets {
 			for _, source := range sourceObjects {
-				e, err := json.Marshal(topology.Edge{Source: source.ID, Target: target})
+				e, err := json.Marshal(topology.Edge{ID: source.ID, Source: source.ID, Target: target, Type: "connects-to"})
 				if err != nil {
 					k8log.Error(err, "failed to retrieve json encoding of node")
 				}
@@ -199,7 +199,9 @@ func (nMap nodesMap) getGroups() []string {
 
 	// Get all nodes which belong to the same part-of collection.
 	nodes = nMap.getLabelData("app.kubernetes.io/part-of", "")
+	fmt.Println("HEREEEEEEEEEEEEEE")
 	for groupName, nodeMetas := range nodes {
+		fmt.Println(nodeMetas)
 		for _, nm := range nodeMetas {
 			groupNodes = append(groupNodes, nm.ID)
 		}
@@ -237,6 +239,8 @@ func (nMap nodesMap) getLabelData(label string, keyLabel string) map[string][]no
 	for _, node := range nMap.nodes {
 
 		lkey := node.nm.Labels[label]
+		fmt.Println("TINAAAAAAAAAAAAAAAAAA")
+		fmt.Println(node.nm.Labels)
 		if lkey != "" {
 			if keyLabel == "" {
 				labelMap[lkey] = append(labelMap[lkey], node.nm)
@@ -385,6 +389,9 @@ func getNodeMetadata(x interface{}) nodeMeta {
 	switch x.(type) {
 	case *deploymentconfigv1.DeploymentConfig:
 		dc := x.(*deploymentconfigv1.DeploymentConfig)
+		fmt.Println("---------------------------------")
+		fmt.Println(dc.Labels)
+		fmt.Println("---------------------------------")
 		node = nodeMeta{
 			ID:          base64.StdEncoding.EncodeToString([]byte(dc.UID)),
 			Name:        dc.Name,
