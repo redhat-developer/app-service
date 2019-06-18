@@ -1,9 +1,5 @@
 package topology
 
-import (
-	"encoding/json"
-)
-
 // Graph contains the groupds, edges and nodes of the graph.
 type Graph struct {
 	Nodes  []Node  `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
@@ -77,32 +73,11 @@ type VisualizationResponse struct {
 
 // GetSampleTopology compiles the nodes, resources, groups
 // and edges to create the json VisualizationResponse.
-func GetSampleTopology(nodes []string, resources map[string]string, groups []Group, edges []Edge) VisualizationResponse {
-	allNodes := []Node{}
-	for _, elem := range nodes {
-		dataNode := &Node{}
-		err := json.Unmarshal([]byte(elem), dataNode)
-		if err != nil {
-			panic(err)
-		}
-		allNodes = append(allNodes, *dataNode)
-	}
-
-	topology := make(map[NodeID]NodeData)
-	for k, elem := range resources {
-		dataResource := &NodeData{}
-		err := json.Unmarshal([]byte(elem), dataResource)
-		if err != nil {
-			panic(err)
-		}
-		var key NodeID
-		key = NodeID(k)
-		topology[key] = *dataResource
-	}
+func GetSampleTopology(nodes []Node, resources map[NodeID]NodeData, groups []Group, edges []Edge) VisualizationResponse {
 
 	return VisualizationResponse{
-		Graph:          Graph{Nodes: allNodes, Groups: groups, Edges: edges},
-		Topology:       topology,
+		Graph:          Graph{Nodes: nodes, Groups: groups, Edges: edges},
+		Topology:       resources,
 		serverMetadata: serverMetadata{Commit: "commit"},
 	}
 }

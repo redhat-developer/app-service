@@ -37,7 +37,13 @@ func TestAppServer_GetResources(t *testing.T) {
 	nMap.nodes["testing"] = iData
 
 	resources := nMap.getResources()
-	require.Equal(t, expected, resources)
+	require.Equal(t, "1", resources["1"].ID)
+	require.Equal(t, "testapp", resources["1"].Name)
+	require.Equal(t, "workload", resources["1"].Type)
+	require.Equal(t, "test", resources["1"].Data.BuilderImage)
+	require.Equal(t, make(map[string]string), resources["1"].Data.DonutStatus)
+	require.Equal(t, "https://test/url", resources["1"].Data.EditURL)
+	require.Equal(t, "https://test/url", resources["1"].Data.URL)
 }
 
 func TestAppServer_GetEdges(t *testing.T) {
@@ -74,17 +80,14 @@ func TestAppServer_GetGroups(t *testing.T) {
 func TestAppServer_GetNode(t *testing.T) {
 	var nMap nodesMap
 	nginx := createResource("1", "DeploymentConfig", "nginx", "testapp", "nodejs")
-	nodejs := createResource("2", "DeploymentConfig", "nodejs", "testapp", "")
 
 	nMap.nodes = make(map[string]innerData)
 	nMap.nodes["nginx"] = nginx
-	nMap.nodes["nodejs"] = nodejs
 
 	nodes := nMap.getNode()
-	var expected []string
-	expected = append(expected, "{\"id\":\"1\",\"name\":\"nginx\"}", "{\"id\":\"2\",\"name\":\"nodejs\"}")
 
-	require.Equal(t, expected, nodes)
+	require.Equal(t, "1", nodes[0].ID)
+	require.Equal(t, "nginx", nodes[0].Name)
 }
 
 func TestAppServer_GetLabelData(t *testing.T) {
@@ -153,14 +156,14 @@ func TestAppServer_AddOrUpdateNode(t *testing.T) {
 	nMap.nodes["nodejs"] = nodejs
 
 	// Test updating nodejs
-	nMap.addOrUpdateNode(newNodejs.nm)
+	nMap.addOrUpdateNodeMeta(newNodejs.nm)
 
 	require.Equal(t, "3", nMap.nodes["nodejs"].nm.ID)
 	require.Equal(t, "1", nMap.nodes["nginx"].nm.ID)
 	require.Equal(t, "", nMap.nodes["perl"].nm.ID)
 
 	// Test adding perl
-	nMap.addOrUpdateNode(perl.nm)
+	nMap.addOrUpdateNodeMeta(perl.nm)
 
 	require.Equal(t, "3", nMap.nodes["nodejs"].nm.ID)
 	require.Equal(t, "1", nMap.nodes["nginx"].nm.ID)

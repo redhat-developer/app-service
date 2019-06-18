@@ -82,7 +82,7 @@ func createTopology(ws *websocket.Conn, namespace string) {
 			if event.Type == "DELETED" {
 				nMap.deleteNode(node)
 			} else {
-				nMap.addOrUpdateNode(node)
+				nMap.addOrUpdateNodeMeta(node)
 			}
 
 			// Get all the list options for each unique node name.
@@ -144,15 +144,11 @@ func createTopology(ws *websocket.Conn, namespace string) {
 }
 
 // Get topology resources.
-func (nMap nodesMap) getResources() map[string]string {
-	resourceMap := make(map[string]string)
+func (nMap nodesMap) getResources() map[topology.NodeID]topology.NodeData {
+	resourceMap := make(map[topology.NodeID]topology.NodeData)
 	for _, iData := range nMap.nodes {
 		if iData.nd.ID != "" {
-			nData, err := json.Marshal(iData.nd)
-			if err != nil {
-				k8log.Error(err, "failed to retrieve json encoding of node")
-			}
-			resourceMap[iData.nd.ID] = string(nData)
+			resourceMap[topology.NodeID(iData.nd.ID)] = iData.nd
 		}
 	}
 
@@ -198,7 +194,6 @@ func (nMap nodesMap) getGroups() []topology.Group {
 	// Get all nodes which belong to the same part-of collection.
 	nodes = nMap.getLabelData("app.kubernetes.io/part-of", "")
 	for groupName, nodeMetas := range nodes {
-		fmt.Println(nodeMetas)
 		for _, nm := range nodeMetas {
 			groupNodes = append(groupNodes, nm.ID)
 		}
@@ -214,14 +209,11 @@ func (nMap nodesMap) getGroups() []topology.Group {
 }
 
 // Create topology node.
-func (nMap nodesMap) getNode() []string {
-	var nodes []string
+func (nMap nodesMap) getNode() []topology.Node {
+	var nodes []topology.Node
 	for _, node := range nMap.nodes {
-		n, err := json.Marshal(topology.Node{Name: node.nm.Name, ID: node.nm.ID})
-		if err != nil {
-			k8log.Error(err, "failed to retrieve json encoding of node")
-		}
-		nodes = addOrUpdateString(nodes, string(n))
+		n := topology.Node{Name: node.nm.Name, ID: node.nm.ID}
+		nodes = addOrUpdateNode(nodes, n)
 	}
 
 	return nodes
@@ -268,7 +260,7 @@ func (nMap nodesMap) deleteNode(nm nodeMeta) {
 }
 
 // Compare and add if resource does not exist or update if resource does exist.
-func (nMap nodesMap) addOrUpdateNode(node nodeMeta) {
+func (nMap nodesMap) addOrUpdateNodeMeta(node nodeMeta) {
 	iData := nMap.nodes[node.Name]
 	iData.nm = node
 	nMap.nodes[node.Name] = iData
@@ -304,6 +296,18 @@ func (nMap nodesMap) addOrUpdateNodeResource(name string, r topology.Resource) {
 	resources = append(resources, r)
 	node.nd.Resources = resources
 	nMap.nodes[name] = node
+}
+
+// Compare and add if resource does not exist or update if resource does exist.
+func addOrUpdateNode(nodes []topology.Node, node topology.Node) []topology.Node {
+	for i, n := range nodes {
+		if n.Name == node.Name {
+			nodes[i] = n
+			return nodes
+		}
+	}
+	nodes = append(nodes, node)
+	return nodes
 }
 
 // Converts the HTTP connection to a websocket in order to stream data.
@@ -381,9 +385,6 @@ func getNodeMetadata(x interface{}) nodeMeta {
 	switch x.(type) {
 	case *deploymentconfigv1.DeploymentConfig:
 		dc := x.(*deploymentconfigv1.DeploymentConfig)
-		fmt.Println("---------------------------------")
-		fmt.Println(dc.Labels)
-		fmt.Println("---------------------------------")
 		node = nodeMeta{
 			ID:          base64.StdEncoding.EncodeToString([]byte(dc.UID)),
 			Name:        dc.Name,
@@ -514,16 +515,4 @@ func getResource(rx interface{}) topology.Resource {
 	}
 
 	return r
-}
-
-// Compare and add if resource does not exist or update if resource does exist.
-func addOrUpdateString(slice []string, str string) []string {
-	for index, element := range slice {
-		if element == str {
-			slice[index] = str
-			return slice
-		}
-	}
-
-	return append(slice, str)
 }
