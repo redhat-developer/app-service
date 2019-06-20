@@ -74,7 +74,6 @@ type VisualizationResponse struct {
 // GetSampleTopology compiles the nodes, resources, groups
 // and edges to create the json VisualizationResponse.
 func GetSampleTopology(nodes []Node, resources map[NodeID]NodeData, groups []Group, edges []Edge) VisualizationResponse {
-
 	return VisualizationResponse{
 		Graph:          Graph{Nodes: nodes, Groups: groups, Edges: edges},
 		Topology:       resources,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -46,6 +47,7 @@ type nodesMap struct {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	Subprotocols:    []string{},
 }
 
 // HandleTopology returns the handler function for the /status endpoint.
@@ -63,7 +65,7 @@ func (srv *AppServer) HandleTopology() http.HandlerFunc {
 func createTopology(ws *websocket.Conn, namespace string) {
 
 	// Create a client.
-	k := kubeclient.NewKubeClient()
+	k := kubeclient.NewKubeClient(upgrader.Subprotocols)
 
 	// Create mutex.
 	mutex := &sync.Mutex{}
@@ -313,12 +315,13 @@ func addOrUpdateNode(nodes []topology.Node, node topology.Node) []topology.Node 
 // Converts the HTTP connection to a websocket in order to stream data.
 func convertHTTPToWebSocket(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	header := r.Header.Get("Sec-Websocket-Protocol")
+	secWsProtocol := strings.Split(header, ", ")
+	upgrader.Subprotocols = append(upgrader.Subprotocols, secWsProtocol...)
 	ws, err := upgrader.Upgrade(w, r, nil)
-
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
-
 	return ws
 }
 

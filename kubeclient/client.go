@@ -13,10 +13,10 @@ type KubeClient struct {
 	OcRouteClient ocrouteclient.RouteV1Interface
 }
 
-func NewKubeClient() *KubeClient {
+func NewKubeClient(parameters []string) *KubeClient {
 	var err error
 	kc := new(KubeClient)
-	config := getKubeConfig()
+	config := getKubeConfig(parameters)
 	kc.CoreClient, err = kubernetes.NewForConfig(&config)
 	if err != nil {
 		panic(err)
@@ -34,9 +34,9 @@ func NewKubeClient() *KubeClient {
 	return kc
 }
 
-func getKubeConfig() rest.Config {
-	host := "https://api.tkurian33.devcluster.openshift.com:6443"
-	bearerToken := "lgqbxL_QeC24ULjqWeZinj_Ri8AaXejPUn6hsQ9s1gw"
+func getKubeConfig(parameters []string) rest.Config {
+	host := parameters[0] + "://" + parameters[1] + ":" + parameters[2]
+	bearerToken := parameters[3]
 
 	return getOpenshiftAPIConfig(host, bearerToken)
 }
