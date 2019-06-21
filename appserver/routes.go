@@ -13,6 +13,9 @@ func (srv *AppServer) SetupRoutes() error {
 			Methods("GET")
 
 		// ADD YOUR OWN ROUTES HERE
+		srv.router.HandleFunc("/topology", srv.HandleTopology()).
+			Name("topology").
+			Methods("GET")
 	})
 	return err
 }
